@@ -1,0 +1,36 @@
+.container {
+  margin: 2rem auto;
+  max-width: 720px;
+  padding: 0 1rem;
+  font-family: Arial, sans-serif;
+}
+
+.hint {
+  color: #555;
+}
+
+button {
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.error {
+  color: #d93025;
+}
+
+.done {
+  color: #188038;
+  font-weight: 600;
+}

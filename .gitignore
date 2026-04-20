@@ -1,0 +1,13 @@
+# Dotnet
+**/bin/
+**/obj/
+
+# Angular/Node
+**/node_modules/
+**/dist/
+
+# Logs and local settings
+**/logs/
+*.log
+.vscode/
+.DS_Store

@@ -1,0 +1,31 @@
+<main class="container">
+  <h1>{{ title }}</h1>
+
+  <p class="hint">Data from backend endpoint: <code>GET /api/TodoItems</code></p>
+
+  <button type="button" (click)="loadTodoItems()">Reload</button>
+
+  @if (isLoading()) {
+    <p>Loading...</p>
+  }
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+
+  @if (!isLoading() && !errorMessage()) {
+    <ul>
+      @for (todo of todoItems(); track todo.id) {
+        <li>
+          <strong>#{{ todo.id }}</strong>
+          <span>{{ todo.title }}</span>
+          <span [class.done]="todo.isCompleted">{{ todo.isCompleted ? 'Done' : 'Pending' }}</span>
+        </li>
+      }
+    </ul>
+
+    @if (todoItems().length === 0) {
+      <p>No items yet. Create data from backend first.</p>
+    }
+  }
+</main>
