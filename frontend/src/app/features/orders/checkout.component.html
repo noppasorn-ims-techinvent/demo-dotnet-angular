@@ -12,8 +12,9 @@
           <div class="card-body">
             <div class="row g-3 align-items-end">
               <div class="col-12 col-md-5">
-                <strong>{{ cart.lines()[i].product.name }}</strong>
+                <strong>{{ lineProductName(i) }}</strong>
                 <div class="small text-muted">รหัสสินค้า #{{ group.value.productId }}</div>
+                <div class="small mt-1">ราคา {{ lineUnitPrice(i) | thaiBaht }} / ชิ้น</div>
               </div>
               <div class="col-12 col-md-3">
                 <label class="form-label mb-0" [attr.for]="'qty-' + i">จำนวน</label>
@@ -26,13 +27,24 @@
                 />
               </div>
               <div class="col-12 col-md-4 text-md-end">
-                <button type="button" class="btn btn-outline-danger btn-sm" (click)="removeLine(i)">เอาออกจากตะกร้า</button>
+                <div class="small text-muted mb-1">รวมแถวนี้</div>
+                <div class="fw-semibold text-primary fs-6">{{ lineAmount(i) | thaiBaht }}</div>
+                <button type="button" class="btn btn-outline-danger btn-sm mt-2" (click)="removeLine(i)">เอาออกจากตะกร้า</button>
               </div>
             </div>
           </div>
         </div>
       }
     </div>
+
+    @if (lineGroups.length > 0) {
+      <div class="card border-primary border-2 mb-4 bg-light">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <span class="fw-semibold fs-5 mb-0">ราคารวมทั้งหมด</span>
+          <span class="fs-4 fw-bold text-primary mb-0">{{ checkoutTotal() | thaiBaht }}</span>
+        </div>
+      </div>
+    }
 
     <button type="submit" class="btn btn-primary btn-lg" [disabled]="busy()">ยืนยันสั่งซื้อ</button>
   </form>

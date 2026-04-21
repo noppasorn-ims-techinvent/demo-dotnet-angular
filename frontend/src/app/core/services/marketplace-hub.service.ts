@@ -171,6 +171,32 @@ export class MarketplaceHubService {
         timerProgressBar: true,
       });
     });
+
+    this.hub.on('catalogProductRemoved', (_payload: { productId: number }) => {
+      this.productDataRefreshTick.update((n) => n + 1);
+    });
+
+    this.hub.on('productDeletedByAdmin', (payload: { productId: number; name: string }) => {
+      this.productDataRefreshTick.update((n) => n + 1);
+      void toastMixin.fire({
+        icon: 'warning',
+        title: 'แอดมินลบสินค้า',
+        text: `${payload.name} (#${payload.productId}) ถูกลบจากระบบแล้ว`,
+        timer: 6500,
+        timerProgressBar: true,
+      });
+    });
+
+    this.hub.on('productDeletedBySeller', (payload: { productId: number; sellerId: number; name: string }) => {
+      this.productDataRefreshTick.update((n) => n + 1);
+      void toastMixin.fire({
+        icon: 'warning',
+        title: 'ผู้ขายลบสินค้า',
+        text: `${payload.name} (#${payload.productId}) · ร้าน #${payload.sellerId}`,
+        timer: 6500,
+        timerProgressBar: true,
+      });
+    });
   }
 
   private async joinAllGroups(user: UserDto): Promise<void> {
@@ -185,7 +211,8 @@ export class MarketplaceHubService {
         console.error('[MarketplaceHub] JoinBuyerGroup ล้มเหลว', e);
       }
     }
-    if (roles.includes('Seller')) {
+    /* Admin ที่ขายสินค้าเองใช้ SellerId = id ตัวเอง — ต้อง join กลุ่ม seller เพื่อรับ sellerNewOrder */
+    if (roles.includes('Seller') || roles.includes('Admin')) {
       try {
         await this.hub.invoke('JoinSellerGroup', user.id);
       } catch (e) {

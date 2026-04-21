@@ -91,15 +91,38 @@ public class ProductService : IProductService
         return await GetByIdAsync(productId, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(int sellerId, int productId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(int userId, bool isAdmin, int productId, CancellationToken cancellationToken = default)
     {
         var entity = await _products.GetByIdForUpdateAsync(productId, cancellationToken);
-        if (entity is null || entity.SellerId != sellerId)
+        if (entity is null)
         {
             return false;
         }
 
+        if (!isAdmin && entity.SellerId != userId)
+        {
+            return false;
+        }
+
+        var ownerSellerId = entity.SellerId;
+        var name = entity.Name;
+        var id = entity.Id;
+
         await _products.DeleteAsync(entity, cancellationToken);
+
+        await _hub.Clients.All.SendAsync("catalogProductRemoved", new { productId = id }, cancellationToken);
+
+        if (isAdmin && ownerSellerId != userId)
+        {
+            await _hub.Clients.Group(MarketplaceHub.SellerGroupName(ownerSellerId))
+                .SendAsync("productDeletedByAdmin", new { productId = id, name }, cancellationToken);
+        }
+        else if (!isAdmin)
+        {
+            await _hub.Clients.Group(MarketplaceHub.AdminsGroup)
+                .SendAsync("productDeletedBySeller", new { productId = id, sellerId = ownerSellerId, name }, cancellationToken);
+        }
+
         return true;
     }
 

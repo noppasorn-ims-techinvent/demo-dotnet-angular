@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import Swal from 'sweetalert2';
 import type { ProductDto } from '../../core/models/api.types';
 import { ThaiBahtPipe } from '../../core/pipes/thai-baht.pipe';
 import { AuthService } from '../../core/services/auth.service';
@@ -50,6 +51,10 @@ export class SellerStockComponent {
     });
   }
 
+  protected canDeleteProduct(p: ProductDto): boolean {
+    return this.auth.hasRole('Admin') || (this.auth.hasRole('Seller') && this.auth.user()?.id === p.sellerId);
+  }
+
   protected save(p: ProductDto): void {
     const qty = this.draft[p.id];
     if (qty == null || qty < 0 || !Number.isFinite(qty)) {
@@ -77,5 +82,46 @@ export class SellerStockComponent {
           this.busyId.set(null);
         },
       });
+  }
+
+  protected async confirmDelete(p: ProductDto): Promise<void> {
+    const result = await Swal.fire({
+      title: 'ลบสินค้านี้?',
+      html: `จะลบ <strong>${p.name}</strong> (#${p.id}) ถาวร`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'ลบ',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#b91c1c',
+      reverseButtons: true,
+      focusCancel: true,
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    this.error.set('');
+    this.busyId.set(p.id);
+    this.productsApi.delete(p.id).subscribe({
+      next: async () => {
+        this.busyId.set(null);
+        await Swal.fire({
+          title: 'ลบแล้ว',
+          icon: 'success',
+          timer: 1600,
+          showConfirmButton: false,
+        });
+        this.reloadList();
+      },
+      error: async () => {
+        this.busyId.set(null);
+        await Swal.fire({
+          title: 'ลบไม่สำเร็จ',
+          text: 'ไม่มีสิทธิ์หรือสินค้าไม่มีอยู่แล้ว',
+          icon: 'error',
+        });
+      },
+    });
   }
 }

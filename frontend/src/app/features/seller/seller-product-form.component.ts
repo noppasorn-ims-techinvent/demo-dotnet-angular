@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import Swal from 'sweetalert2';
 import { ProductService } from '../../core/services/product.service';
 
 @Component({
@@ -30,6 +31,7 @@ export class SellerProductFormComponent implements OnInit, AfterViewInit {
   });
 
   protected productId: number | null = null;
+  protected productName = signal('');
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -41,6 +43,7 @@ export class SellerProductFormComponent implements OnInit, AfterViewInit {
     this.productId = Number(id);
     this.products.getById(this.productId).subscribe({
       next: (p) => {
+        this.productName.set(p.name);
         this.form.patchValue({
           name: p.name,
           description: p.description ?? '',
@@ -84,6 +87,51 @@ export class SellerProductFormComponent implements OnInit, AfterViewInit {
         this.busy.set(false);
       },
       complete: () => this.busy.set(false),
+    });
+  }
+
+  protected async confirmDelete(): Promise<void> {
+    if (this.productId == null) {
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'ลบสินค้านี้?',
+      html: `จะลบ <strong>${this.productName() || 'สินค้า'}</strong> (#${this.productId}) ถาวร`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'ลบ',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#b91c1c',
+      reverseButtons: true,
+      focusCancel: true,
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    this.error.set('');
+    this.busy.set(true);
+    this.products.delete(this.productId).subscribe({
+      next: async () => {
+        this.busy.set(false);
+        await Swal.fire({
+          title: 'ลบแล้ว',
+          icon: 'success',
+          timer: 1800,
+          showConfirmButton: false,
+        });
+        void this.router.navigateByUrl('/shop');
+      },
+      error: async () => {
+        this.busy.set(false);
+        await Swal.fire({
+          title: 'ลบไม่สำเร็จ',
+          text: 'ไม่มีสิทธิ์หรือสินค้าไม่มีอยู่แล้ว',
+          icon: 'error',
+        });
+      },
     });
   }
 }

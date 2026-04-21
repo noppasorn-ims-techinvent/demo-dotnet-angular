@@ -12,13 +12,14 @@ import {
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { catchError, finalize, throwError } from 'rxjs';
+import { ThaiBahtPipe } from '../../core/pipes/thai-baht.pipe';
 import { CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ThaiBahtPipe],
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.css',
 })
@@ -32,6 +33,8 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
 
   protected readonly error = signal('');
   protected readonly busy = signal(false);
+  /** ยอดรวมจากจำนวนในฟอร์ม × ราคาจากตะกร้า */
+  protected readonly checkoutTotal = signal(0);
 
   protected readonly form = this.fb.group({
     lines: this.fb.array<FormGroup>([]),
@@ -61,9 +64,54 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
       );
     }
 
-    this.form.controls.lines.valueChanges.subscribe(() => {
-      /* Demo: react to quantity edits (could sync back to cart). */
-    });
+    this.recalcCheckoutTotal();
+    this.form.controls.lines.valueChanges.subscribe(() => this.recalcCheckoutTotal());
+  }
+
+  protected lineProductName(i: number): string {
+    const pid = this.lineGroups.at(i)?.get('productId')?.value;
+    if (typeof pid !== 'number') {
+      return '';
+    }
+    return this.cart.lines().find((l) => l.product.id === pid)?.product.name ?? '';
+  }
+
+  protected lineUnitPrice(i: number): number {
+    const pid = this.lineGroups.at(i)?.get('productId')?.value;
+    if (typeof pid !== 'number') {
+      return 0;
+    }
+    return this.cart.lines().find((l) => l.product.id === pid)?.product.price ?? 0;
+  }
+
+  /** ราคารายแถว = ราคาต่อชิ้น × จำนวนในฟอร์ม */
+  protected lineAmount(i: number): number {
+    const g = this.lineGroups.at(i);
+    if (!g) {
+      return 0;
+    }
+    const pid = g.get('productId')?.value;
+    const qty = Number(g.get('quantity')?.value ?? 0);
+    if (typeof pid !== 'number' || !Number.isFinite(qty)) {
+      return 0;
+    }
+    const line = this.cart.lines().find((l) => l.product.id === pid);
+    if (!line) {
+      return 0;
+    }
+    return line.product.price * qty;
+  }
+
+  private recalcCheckoutTotal(): void {
+    const raw = this.lineGroups.getRawValue() as Array<{ productId: number; quantity: number }>;
+    let sum = 0;
+    for (const r of raw) {
+      const line = this.cart.lines().find((l) => l.product.id === r.productId);
+      if (line && r.quantity != null) {
+        sum += line.product.price * Number(r.quantity);
+      }
+    }
+    this.checkoutTotal.set(sum);
   }
 
   ngAfterViewInit(): void {
@@ -79,6 +127,7 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
 
     this.cart.remove(productId);
     this.lineGroups.removeAt(index);
+    this.recalcCheckoutTotal();
 
     if (this.lineGroups.length === 0) {
       void this.router.navigateByUrl('/shop');

@@ -22,7 +22,7 @@
           <th>ร้าน</th>
           <th>ราคา</th>
           <th style="width: 8rem">คงเหลือ</th>
-          <th style="min-width: 12rem"></th>
+          <th style="min-width: 14rem"></th>
         </tr>
       </thead>
       <tbody>
@@ -46,9 +46,19 @@
             </td>
             <td>
               <button type="button" class="btn btn-primary btn-sm me-1" [disabled]="busyId() === p.id" (click)="save(p)">
-                {{ busyId() === p.id ? 'กำลังบันทึก…' : 'บันทึก' }}
+                {{ busyId() === p.id ? 'กำลังดำเนินการ…' : 'บันทึก' }}
               </button>
-              <a class="btn btn-outline-secondary btn-sm" [routerLink]="['/seller/products', p.id, 'edit']">แก้ไขทั้งหมด</a>
+              <a class="btn btn-outline-secondary btn-sm me-1" [routerLink]="['/seller/products', p.id, 'edit']">แก้ไขทั้งหมด</a>
+              @if (canDeleteProduct(p)) {
+                <button
+                  type="button"
+                  class="btn btn-outline-danger btn-sm"
+                  [disabled]="busyId() === p.id"
+                  (click)="confirmDelete(p)"
+                >
+                  ลบ
+                </button>
+              }
             </td>
           </tr>
         }

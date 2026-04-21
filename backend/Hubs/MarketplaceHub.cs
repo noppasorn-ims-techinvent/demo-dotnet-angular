@@ -36,6 +36,10 @@ public class MarketplaceHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, BuyerGroupName(buyerId));
     }
 
+    /// <summary>
+    /// รับแจ้งเตือนคำสั่งซื้อของสินค้าที่ SellerId ตรงกับ user นี้
+    /// รองรับทั้งบัญชี Seller และ Admin ที่ลงสินค้าเอง (Product.SellerId = id แอดมิน)
+    /// </summary>
     public async Task JoinSellerGroup(int sellerId)
     {
         var userId = TryGetUserId(Context.User);
@@ -44,9 +48,11 @@ public class MarketplaceHub : Hub
             throw new HubException("You can only join your own seller group.");
         }
 
-        if (!Context.User!.IsInRole("Seller"))
+        var isSeller = Context.User!.IsInRole("Seller");
+        var isAdmin = Context.User.IsInRole("Admin");
+        if (!isSeller && !isAdmin)
         {
-            throw new HubException("Seller role required.");
+            throw new HubException("Seller or Admin role required.");
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, SellerGroupName(sellerId));

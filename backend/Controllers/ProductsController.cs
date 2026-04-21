@@ -82,7 +82,8 @@ public class ProductsController : BaseApiController
             return Unauthorized();
         }
 
-        var deleted = await _products.DeleteAsync(sellerId.Value, id, cancellationToken);
+        var isAdmin = User.IsInRole("Admin");
+        var deleted = await _products.DeleteAsync(sellerId.Value, isAdmin, id, cancellationToken);
         return deleted ? NoContent() : NotFound();
     }
 

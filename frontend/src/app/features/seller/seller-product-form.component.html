@@ -29,7 +29,12 @@
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" [disabled]="busy()">บันทึก</button>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <button type="submit" class="btn btn-primary" [disabled]="busy()">บันทึก</button>
+          @if (productId != null) {
+            <button type="button" class="btn btn-outline-danger" [disabled]="busy()" (click)="confirmDelete()">ลบสินค้า</button>
+          }
+        </div>
       </form>
     </div>
   </div>
