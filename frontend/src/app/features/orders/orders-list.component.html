@@ -16,6 +16,9 @@
             <strong class="fs-5">#{{ o.id }}</strong>
             <span class="text-muted small ms-2">{{ o.createdAtUtc | date: 'medium' }}</span>
             <div class="small text-secondary mt-1">สถานะ: {{ statusLabel(o.status) }}</div>
+            @if (o.splitSourceOrderId) {
+              <div class="small text-info mt-1">แยกมาจากออเดอร์ #{{ o.splitSourceOrderId }}</div>
+            }
             @if (o.simulatedPaymentMethod) {
               <div class="small text-muted mt-1">ชำระแบบจำลอง: {{ o.simulatedPaymentMethod }}</div>
             }
@@ -29,6 +32,23 @@
                 <strong>คำตอบจากร้าน/แอดมิน:</strong> {{ o.cancellationReviewerNote }}
               </div>
             }
+            <div class="mt-2">
+              <div class="small text-muted mb-1">รายการสินค้า</div>
+              @if (o.lines?.length) {
+                <ul class="small mb-0 ps-3 text-secondary">
+                  @for (line of o.lines; track $index) {
+                    <li>
+                      {{ line.productName }} × {{ line.quantity }} · {{ line.unitPrice | thaiBaht }} / ชิ้น
+                      @if (line.sellerDisplayName) {
+                        <span class="text-muted">({{ line.sellerDisplayName }})</span>
+                      }
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="small text-muted mb-0">ไม่มีรายการในออเดอร์นี้</p>
+              }
+            </div>
           </div>
           <div class="text-md-end">
             <div class="small text-muted">ยอดรวม</div>

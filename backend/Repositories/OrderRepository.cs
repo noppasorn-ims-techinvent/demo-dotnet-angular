@@ -18,6 +18,7 @@ public class OrderRepository : IOrderRepository
     {
         return await _context.Orders
             .AsNoTracking()
+            .Include(o => o.Buyer)
             .Include(o => o.Lines)
             .ThenInclude(l => l.Product)
             .ThenInclude(p => p.Seller)
@@ -28,6 +29,7 @@ public class OrderRepository : IOrderRepository
     {
         return await _context.Orders
             .AsNoTracking()
+            .Include(o => o.Buyer)
             .Include(o => o.Lines)
             .ThenInclude(l => l.Product)
             .ThenInclude(p => p.Seller)
@@ -53,6 +55,7 @@ public class OrderRepository : IOrderRepository
     {
         return await _context.Orders
             .AsNoTracking()
+            .Include(o => o.Buyer)
             .Include(o => o.Lines)
             .ThenInclude(l => l.Product)
             .ThenInclude(p => p.Seller)
@@ -64,6 +67,7 @@ public class OrderRepository : IOrderRepository
     {
         return await _context.Orders
             .AsNoTracking()
+            .Include(o => o.Buyer)
             .Include(o => o.Lines)
             .ThenInclude(l => l.Product)
             .ThenInclude(p => p.Seller)

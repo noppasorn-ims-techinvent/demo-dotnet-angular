@@ -13,7 +13,7 @@
       <thead class="table-light">
         <tr>
           <th>รหัส</th>
-          <th>ผู้ซื้อ</th>
+          <th style="min-width: 10rem">ผู้ซื้อ</th>
           <th>วันที่สร้าง</th>
           <th>สถานะ</th>
           <th>ยอดรวม</th>
@@ -23,8 +23,16 @@
       <tbody>
         @for (o of orders(); track o.id) {
           <tr>
-            <td>{{ o.id }}</td>
-            <td>{{ o.buyerId }}</td>
+            <td>
+              <div class="fw-medium">#{{ o.id }}</div>
+              @if (o.splitSourceOrderId) {
+                <div class="small text-info">แยกมาจาก #{{ o.splitSourceOrderId }}</div>
+              }
+            </td>
+            <td>
+              <div class="fw-medium">{{ o.buyerDisplayName || ('ผู้ซื้อ #' + o.buyerId) }}</div>
+              <div class="small text-muted">รหัสผู้ใช้ #{{ o.buyerId }}</div>
+            </td>
             <td>{{ o.createdAtUtc | date: 'short' }}</td>
             <td style="min-width: 11rem">
               @if (o.status === 4) {
@@ -45,6 +53,23 @@
             <td class="text-nowrap fw-medium">{{ o.totalAmount | thaiBaht }}</td>
             <td>
               <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="busy()" (click)="deleteOrder(o)">ลบ</button>
+            </td>
+          </tr>
+          <tr class="table-light">
+            <td colspan="6" class="small py-2 border-top-0">
+              <span class="text-muted me-2">รายการสินค้า:</span>
+              @if (o.lines?.length) {
+                @for (line of o.lines; track $index) {
+                  <span class="me-3 text-nowrap d-inline-block"
+                    >{{ line.productName }} × {{ line.quantity }} · {{ line.unitPrice | thaiBaht }} / ชิ้น
+                    @if (line.sellerDisplayName) {
+                      <span class="text-muted">({{ line.sellerDisplayName }})</span>
+                    }
+                  </span>
+                }
+              } @else {
+                <span class="text-muted">ไม่มีรายการในออเดอร์นี้</span>
+              }
             </td>
           </tr>
           @if (o.status === 4 && orderDetails()[o.id]; as d) {

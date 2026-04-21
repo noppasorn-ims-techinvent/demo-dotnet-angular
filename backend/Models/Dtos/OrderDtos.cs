@@ -28,6 +28,9 @@ public class OrderDto
 
     public int BuyerId { get; set; }
 
+    /// <summary>ชื่อแสดงผู้ซื้อ (จาก User.DisplayName)</summary>
+    public string BuyerDisplayName { get; set; } = string.Empty;
+
     public OrderStatus Status { get; set; }
 
     public decimal TotalAmount { get; set; }

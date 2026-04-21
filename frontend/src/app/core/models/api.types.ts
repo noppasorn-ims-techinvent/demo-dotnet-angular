@@ -36,6 +36,8 @@ export interface OrderLineDto {
 export interface OrderDto {
   id: number;
   buyerId: number;
+  /** ชื่อแสดงจาก backend (User.DisplayName) */
+  buyerDisplayName?: string;
   /** Matches backend `OrderStatus` enum numeric value. */
   status: number;
   totalAmount: number;

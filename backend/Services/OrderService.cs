@@ -278,6 +278,12 @@ public class OrderService : IOrderService
                 return null;
             }
 
+            var sellerUserIdsForFinalNotify = order.Lines
+                .Where(l => l.Product is not null)
+                .Select(l => l.Product!.SellerId)
+                .Distinct()
+                .ToList();
+
             int targetSellerId;
             var explicitTarget = request.TargetSellerUserId;
             if (explicitTarget is >= 1)
@@ -405,8 +411,6 @@ public class OrderService : IOrderService
             await _db.SaveChangesAsync(cancellationToken);
 
             var parentId = order.Id;
-            var buyerId = order.BuyerId;
-            var parentRemoved = false;
 
             if (splitChild is not null)
             {
@@ -445,9 +449,22 @@ public class OrderService : IOrderService
                 var remainingCount = await _db.OrderLines.CountAsync(l => l.OrderId == parentId, cancellationToken);
                 if (remainingCount == 0)
                 {
-                    _db.Orders.Remove(order);
+                    // เก็บแถว Orders ไว้ — ยกเลิกครบทุกร้านแล้ว แค่ตั้งสถานะ (ไม่ลบจาก DB)
+                    order.Status = OrderStatus.Cancelled;
+                    order.TotalAmount = 0;
+                    order.PreCancellationStatus = null;
+                    order.BuyerCancellationReason = null;
                     await _db.SaveChangesAsync(cancellationToken);
-                    parentRemoved = true;
+
+                    var cancelledStatus = OrderStatus.Cancelled.ToString();
+                    foreach (var sid in sellerUserIdsForFinalNotify)
+                    {
+                        await _hub.Clients.Group(MarketplaceHub.SellerGroupName(sid))
+                            .SendAsync(
+                                "storeOrderStatusChanged",
+                                new { orderId = order.Id, status = cancelledStatus },
+                                cancellationToken);
+                    }
                 }
                 else
                 {
@@ -466,30 +483,13 @@ public class OrderService : IOrderService
 
             await transaction.CommitAsync(cancellationToken);
 
-            if (parentRemoved)
+            if (splitChild is not null)
             {
-                await _hub.Clients.Group(MarketplaceHub.BuyerGroupName(buyerId))
-                    .SendAsync("buyerOrderDeletedByAdmin", new { orderId = parentId }, cancellationToken);
-
-                if (splitChild is not null)
+                var childDto = await _orders.GetByIdWithLinesAsync(splitChild.Id, cancellationToken);
+                if (childDto is not null)
                 {
-                    var childDto = await _orders.GetByIdWithLinesAsync(splitChild.Id, cancellationToken);
-                    if (childDto is not null)
-                    {
-                        await BroadcastOrderStatusAsync(childDto, cancellationToken);
-                        return Map(childDto);
-                    }
+                    await BroadcastOrderStatusAsync(childDto, cancellationToken);
                 }
-
-                var newest = await _db.Orders
-                    .AsNoTracking()
-                    .Include(o => o.Lines)
-                    .ThenInclude(l => l.Product)
-                    .ThenInclude(p => p.Seller)
-                    .Where(o => o.BuyerId == buyerId)
-                    .OrderByDescending(o => o.CreatedAtUtc)
-                    .FirstOrDefaultAsync(cancellationToken);
-                return newest is null ? null : Map(newest);
             }
 
             var full = await _orders.GetByIdWithLinesAsync(parentId, cancellationToken);
@@ -497,6 +497,19 @@ public class OrderService : IOrderService
             {
                 await BroadcastOrderStatusAsync(full, cancellationToken);
                 await BroadcastCancellationHubAsync(full, request.Approved, cancellationToken);
+
+                // ไม่อนุมัติจนย้ายบรรทัดหมด — พ่อเป็นออเดอร์ว่างสถานะยกเลิก คืน DTO ออเดอร์ลูกให้ผู้เรียก (เดิมตอนลบพ่อจะคืนลูก)
+                if (splitChild is not null
+                    && full.Status == OrderStatus.Cancelled
+                    && full.Lines.Count == 0)
+                {
+                    var childReturn = await _orders.GetByIdWithLinesAsync(splitChild.Id, cancellationToken);
+                    if (childReturn is not null)
+                    {
+                        return Map(childReturn);
+                    }
+                }
+
                 return Map(full);
             }
 
@@ -679,6 +692,7 @@ public class OrderService : IOrderService
         {
             Id = o.Id,
             BuyerId = o.BuyerId,
+            BuyerDisplayName = ResolveBuyerDisplayName(o),
             Status = o.Status,
             TotalAmount = o.TotalAmount,
             CreatedAtUtc = o.CreatedAtUtc,
@@ -737,6 +751,7 @@ public class OrderService : IOrderService
         {
             Id = o.Id,
             BuyerId = o.BuyerId,
+            BuyerDisplayName = ResolveBuyerDisplayName(o),
             Status = o.Status,
             TotalAmount = subtotal,
             CreatedAtUtc = o.CreatedAtUtc,
@@ -744,5 +759,11 @@ public class OrderService : IOrderService
         };
         CopyLifecycle(o, dto);
         return dto;
+    }
+
+    private static string ResolveBuyerDisplayName(Order o)
+    {
+        var name = o.Buyer?.DisplayName?.Trim();
+        return string.IsNullOrEmpty(name) ? $"ผู้ซื้อ #{o.BuyerId}" : name;
     }
 }
