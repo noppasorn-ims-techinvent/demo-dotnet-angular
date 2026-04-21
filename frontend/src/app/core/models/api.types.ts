@@ -1,3 +1,11 @@
+/** รูปแบบ envelope จาก API (ก่อนถอดที่ interceptor) */
+export interface ApiEnvelope<T = unknown> {
+  success: boolean;
+  message: string;
+  traceId: string;
+  data: T;
+}
+
 export interface UserDto {
   id: number;
   email: string;

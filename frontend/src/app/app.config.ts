@@ -3,6 +3,7 @@ import { ApplicationConfig, inject, provideAppInitializer } from '@angular/core'
 import { provideRouter } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';
+import { apiEnvelopeInterceptor } from './core/interceptors/api-envelope.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import type { AppConfigDto } from './core/models/api.types';
 import { AppConfigService } from './core/services/app-config.service';
@@ -11,7 +12,7 @@ import { MarketplaceHubService } from './core/services/marketplace-hub.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([apiEnvelopeInterceptor, authInterceptor])),
     provideRouter(routes),
     provideAppInitializer(() => {
       const auth = inject(AuthService);
