@@ -1,0 +1,36 @@
+<section class="container py-4" style="max-width: 640px">
+  <h1 class="h2 mb-4">{{ productId == null ? 'เพิ่มสินค้า' : 'แก้ไขสินค้า' }}</h1>
+
+  @if (error()) {
+    <div class="alert alert-danger" role="alert">{{ error() }}</div>
+  }
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="mb-3">
+          <label class="form-label" for="pf-name">ชื่อสินค้า</label>
+          <input id="pf-name" #nameInput class="form-control" type="text" formControlName="name" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="pf-desc">รายละเอียด</label>
+          <textarea id="pf-desc" class="form-control" rows="4" formControlName="description"></textarea>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label" for="pf-price">ราคา (บาท)</label>
+            <input id="pf-price" class="form-control" type="number" step="0.01" formControlName="price" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pf-stock">จำนวนคงคลัง</label>
+            <input id="pf-stock" class="form-control" type="number" formControlName="stockQuantity" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" [disabled]="busy()">บันทึก</button>
+      </form>
+    </div>
+  </div>
+</section>

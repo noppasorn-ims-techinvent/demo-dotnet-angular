@@ -1,0 +1,62 @@
+<section class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    <h1 class="h2 mb-0">ปรับจำนวนคงเหลือ</h1>
+    <a routerLink="/shop" class="btn btn-outline-primary btn-sm">กลับร้านค้า</a>
+  </div>
+
+  @if (auth.hasRole('Admin')) {
+    <p class="text-muted small">คุณเป็นผู้ดูแลระบบ — แสดงสินค้าทั้งหมดในร้าน</p>
+  } @else {
+    <p class="text-muted small">แสดงเฉพาะสินค้าของคุณ</p>
+  }
+
+  @if (error()) {
+    <div class="alert alert-danger" role="alert">{{ error() }}</div>
+  }
+
+  <div class="table-responsive shadow-sm rounded bg-white">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>สินค้า</th>
+          <th>ร้าน</th>
+          <th>ราคา</th>
+          <th style="width: 8rem">คงเหลือ</th>
+          <th style="min-width: 12rem"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of items(); track p.id) {
+          <tr>
+            <td>
+              <strong>{{ p.name }}</strong>
+              <div class="small text-muted">#{{ p.id }}</div>
+            </td>
+            <td>{{ p.sellerDisplayName }}</td>
+            <td class="text-nowrap">{{ p.price | thaiBaht }}</td>
+            <td>
+              <input
+                class="form-control form-control-sm"
+                type="number"
+                min="0"
+                step="1"
+                [name]="'stock-' + p.id"
+                [(ngModel)]="draft[p.id]"
+              />
+            </td>
+            <td>
+              <button type="button" class="btn btn-primary btn-sm me-1" [disabled]="busyId() === p.id" (click)="save(p)">
+                {{ busyId() === p.id ? 'กำลังบันทึก…' : 'บันทึก' }}
+              </button>
+              <a class="btn btn-outline-secondary btn-sm" [routerLink]="['/seller/products', p.id, 'edit']">แก้ไขทั้งหมด</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (!error() && items().length === 0) {
+    <p class="text-muted mt-3">ยังไม่มีสินค้า</p>
+  }
+</section>

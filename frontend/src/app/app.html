@@ -1,31 +1,66 @@
-<main class="container">
-  <h1>{{ title }}</h1>
-
-  <p class="hint">Data from backend endpoint: <code>GET /api/TodoItems</code></p>
-
-  <button type="button" (click)="loadTodoItems()">Reload</button>
-
-  @if (isLoading()) {
-    <p>Loading...</p>
-  }
-
-  @if (errorMessage()) {
-    <p class="error">{{ errorMessage() }}</p>
-  }
-
-  @if (!isLoading() && !errorMessage()) {
-    <ul>
-      @for (todo of todoItems(); track todo.id) {
-        <li>
-          <strong>#{{ todo.id }}</strong>
-          <span>{{ todo.title }}</span>
-          <span [class.done]="todo.isCompleted">{{ todo.isCompleted ? 'Done' : 'Pending' }}</span>
+<nav class="navbar navbar-expand-md navbar-light bg-white border-bottom shadow-sm sticky-top">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" routerLink="/">{{ appCfg.config()?.appName ?? 'ร้านค้า' }}</a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#mainNav"
+      aria-controls="mainNav"
+      aria-expanded="false"
+      aria-label="เปิดเมนู"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav ms-auto mb-2 mb-md-0 align-items-md-center">
+        <li class="nav-item d-none d-md-block">
+          <span class="nav-link disabled py-md-2 small text-muted">Angular + ASP.NET Core</span>
         </li>
-      }
-    </ul>
+        @if (auth.isAuthenticated()) {
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/shop" routerLinkActive="active">ร้านค้า</a>
+          </li>
+          @if (auth.hasRole('Buyer')) {
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/orders" routerLinkActive="active">คำสั่งซื้อ</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/checkout" routerLinkActive="active">ชำระเงิน</a>
+            </li>
+          }
+          @if (auth.hasRole('Seller') || auth.hasRole('Admin')) {
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/seller/stock" routerLinkActive="active">ปรับสต็อก</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/seller/products/new" routerLinkActive="active">เพิ่มสินค้า</a>
+            </li>
+          }
+          @if (auth.hasRole('Admin')) {
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/admin/orders" routerLinkActive="active">จัดการคำสั่งซื้อ</a>
+            </li>
+          }
+          <li class="nav-item">
+            <span class="nav-link small text-body-secondary py-md-2">{{ auth.user()?.displayName }}</span>
+          </li>
+          <li class="nav-item ms-md-1">
+            <button type="button" class="btn btn-outline-secondary btn-sm" (click)="auth.logout()">ออกจากระบบ</button>
+          </li>
+        } @else {
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/login" routerLinkActive="active">เข้าสู่ระบบ</a>
+          </li>
+          <li class="nav-item ms-md-1">
+            <a class="btn btn-primary btn-sm" routerLink="/register">สมัครสมาชิก</a>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+</nav>
 
-    @if (todoItems().length === 0) {
-      <p>No items yet. Create data from backend first.</p>
-    }
-  }
+<main class="pb-5">
+  <router-outlet />
 </main>

@@ -1,0 +1,39 @@
+<section class="container py-4" style="max-width: 720px">
+  <h1 class="h2 mb-4">ชำระเงิน</h1>
+
+  @if (error()) {
+    <div class="alert alert-danger" role="alert">{{ error() }}</div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div formArrayName="lines">
+      @for (group of lineGroups.controls; track $index; let i = $index) {
+        <div class="card border-0 shadow-sm mb-3" [formGroupName]="i">
+          <div class="card-body">
+            <div class="row g-3 align-items-end">
+              <div class="col-12 col-md-5">
+                <strong>{{ cart.lines()[i].product.name }}</strong>
+                <div class="small text-muted">รหัสสินค้า #{{ group.value.productId }}</div>
+              </div>
+              <div class="col-12 col-md-3">
+                <label class="form-label mb-0" [attr.for]="'qty-' + i">จำนวน</label>
+                <input
+                  class="form-control"
+                  type="number"
+                  [id]="'qty-' + i"
+                  formControlName="quantity"
+                  #qty
+                />
+              </div>
+              <div class="col-12 col-md-4 text-md-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" (click)="removeLine(i)">เอาออกจากตะกร้า</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg" [disabled]="busy()">ยืนยันสั่งซื้อ</button>
+  </form>
+</section>

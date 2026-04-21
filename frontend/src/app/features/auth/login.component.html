@@ -1,0 +1,54 @@
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-5">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4 p-md-5">
+          <h1 class="h3 mb-4 text-center">เข้าสู่ระบบ</h1>
+
+          @if (error()) {
+            <div class="alert alert-danger py-2" role="alert">{{ error() }}</div>
+          }
+
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <div class="mb-3">
+              <label class="form-label" for="login-email">อีเมล</label>
+              <input
+                id="login-email"
+                class="form-control"
+                type="email"
+                formControlName="email"
+                autocomplete="username"
+                [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+              />
+              @if (form.controls.email.touched && form.controls.email.invalid) {
+                <div class="invalid-feedback d-block">กรุณากรอกอีเมลให้ถูกต้อง</div>
+              }
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label" for="login-password">รหัสผ่าน</label>
+              <input
+                id="login-password"
+                class="form-control"
+                type="password"
+                formControlName="password"
+                autocomplete="current-password"
+                [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+              />
+              @if (form.controls.password.touched && form.controls.password.invalid) {
+                <div class="invalid-feedback d-block">อย่างน้อย 6 ตัวอักษร</div>
+              }
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2" [disabled]="auth.busy()">เข้าสู่ระบบ</button>
+          </form>
+
+          <p class="text-center text-muted small mt-4 mb-0">
+            ยังไม่มีบัญชี? <a routerLink="/register">สมัครสมาชิก</a>
+          </p>
+          <p class="text-center text-muted small mt-2 mb-0">ทดลองผู้ซื้อ: buyer@demo.local / Buyer123!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

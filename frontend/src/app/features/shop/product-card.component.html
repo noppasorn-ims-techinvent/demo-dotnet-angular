@@ -1,0 +1,19 @@
+<article class="card h-100 border-0 shadow-sm product-card">
+  <div class="card-body d-flex flex-column">
+    <h3 class="h5 card-title">{{ product.name }}</h3>
+    <p class="small text-muted mb-2">ร้าน: {{ product.sellerDisplayName }}</p>
+    <p class="fs-5 fw-semibold text-primary mb-2">{{ product.price | thaiBaht }}</p>
+    <p class="small text-secondary mb-3">คงเหลือ: {{ product.stockQuantity }}</p>
+    <div class="mt-auto d-flex flex-wrap gap-2 align-items-center">
+      @if (auth.hasRole('Buyer')) {
+        <button type="button" class="btn btn-primary btn-sm" (click)="emitAdd(1)">ใส่ตะกร้า</button>
+      } @else {
+        <span class="small text-muted">เฉพาะผู้ซื้อ</span>
+      }
+      <a class="btn btn-outline-secondary btn-sm" [routerLink]="['/shop/product', product.id]">รายละเอียด</a>
+      @if (auth.hasRole('Admin') || (auth.hasRole('Seller') && auth.user()?.id === product.sellerId)) {
+        <a class="btn btn-outline-primary btn-sm" [routerLink]="['/seller/products', product.id, 'edit']">แก้ไข</a>
+      }
+    </div>
+  </div>
+</article>

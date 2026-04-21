@@ -1,0 +1,42 @@
+<section class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-5">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4 p-md-5">
+          <h1 class="h3 mb-4 text-center">สมัครสมาชิก</h1>
+
+          @if (error()) {
+            <div class="alert alert-danger py-2" role="alert">{{ error() }}</div>
+          }
+
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <div class="mb-3">
+              <label class="form-label" for="reg-name">ชื่อที่แสดง</label>
+              <input id="reg-name" class="form-control" type="text" formControlName="displayName" autocomplete="name" />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="reg-email">อีเมล</label>
+              <input id="reg-email" class="form-control" type="email" formControlName="email" autocomplete="username" />
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label" for="reg-password">รหัสผ่าน</label>
+              <input
+                id="reg-password"
+                class="form-control"
+                type="password"
+                formControlName="password"
+                autocomplete="new-password"
+              />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2" [disabled]="auth.busy()">สมัครสมาชิก</button>
+          </form>
+
+          <p class="text-center text-muted small mt-4 mb-0">มีบัญชีแล้ว? <a routerLink="/login">เข้าสู่ระบบ</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

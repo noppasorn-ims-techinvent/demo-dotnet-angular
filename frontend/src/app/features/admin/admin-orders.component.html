@@ -1,0 +1,50 @@
+<section class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <h1 class="h2 mb-0">จัดการคำสั่งซื้อ (ผู้ดูแล)</h1>
+    <a routerLink="/shop" class="btn btn-outline-primary btn-sm">กลับร้านค้า</a>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-danger" role="alert">{{ error() }}</div>
+  }
+
+  <div class="table-responsive shadow-sm rounded bg-white">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>รหัส</th>
+          <th>ผู้ซื้อ</th>
+          <th>วันที่สร้าง</th>
+          <th>สถานะ</th>
+          <th>ยอดรวม</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (o of orders(); track o.id) {
+          <tr>
+            <td>{{ o.id }}</td>
+            <td>{{ o.buyerId }}</td>
+            <td>{{ o.createdAtUtc | date: 'short' }}</td>
+            <td style="min-width: 11rem">
+              <select
+                class="form-select form-select-sm"
+                [ngModel]="o.status"
+                (ngModelChange)="updateStatus(o, $event)"
+                [disabled]="busy()"
+              >
+                @for (opt of statusOptions; track opt.value) {
+                  <option [ngValue]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            </td>
+            <td class="text-nowrap fw-medium">{{ o.totalAmount | thaiBaht }}</td>
+            <td>
+              <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="busy()" (click)="deleteOrder(o)">ลบ</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

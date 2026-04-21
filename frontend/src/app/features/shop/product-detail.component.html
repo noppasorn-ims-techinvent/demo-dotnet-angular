@@ -1,0 +1,29 @@
+@if (product(); as p) {
+  <section class="container py-4" style="max-width: 720px">
+    <a routerLink="/shop" class="btn btn-link ps-0 mb-3">← กลับร้านค้า</a>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-md-5">
+        <h1 class="h2 mb-3">{{ p.name }}</h1>
+        <p class="text-muted mb-2">ร้าน: {{ p.sellerDisplayName }}</p>
+        <p class="fs-4 fw-semibold text-primary mb-2">{{ p.price | thaiBaht }}</p>
+        <p class="text-secondary mb-3">คงเหลือ: {{ p.stockQuantity }} ชิ้น</p>
+        @if (p.description) {
+          <p class="mb-4 text-break" style="white-space: pre-wrap">{{ p.description }}</p>
+        }
+        @if (auth.hasRole('Buyer')) {
+          <button type="button" class="btn btn-primary btn-lg" (click)="addOne()">ใส่ตะกร้า</button>
+        } @else {
+          <p class="text-muted mb-0">การสั่งซื้อใช้ได้เฉพาะบัญชีผู้ซื้อ (Buyer)</p>
+        }
+        @if (auth.hasRole('Seller') || auth.hasRole('Admin')) {
+          <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+            <a class="btn btn-outline-secondary btn-sm" routerLink="/seller/stock">ปรับสต็อก</a>
+            @if (auth.hasRole('Admin') || (auth.hasRole('Seller') && auth.user()?.id === p.sellerId)) {
+              <a class="btn btn-outline-primary btn-sm" [routerLink]="['/seller/products', p.id, 'edit']">แก้ไขสินค้านี้</a>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+}

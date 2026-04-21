@@ -1,1 +1,37 @@
 /* You can add global styles to this file, and also import other style files */
+
+:root {
+  font-family: 'Kanit', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+  /* โทนหลักแบบร้านไทย — เขียวมรกตเข้ม */
+  --bs-primary: #0f766e;
+  --bs-primary-rgb: 15, 118, 110;
+  --bs-link-color: #0d5c56;
+  --bs-link-hover-color: #0a4a45;
+}
+
+body {
+  margin: 0;
+  font-family: inherit;
+  background-color: var(--bs-gray-100);
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* ลิงก์ใน SweetAlert ให้อ่านง่าย */
+.swal2-popup {
+  font-family: 'Kanit', ui-sans-serif, system-ui, sans-serif !important;
+}
+
+/* toast / กล่อง Swal ให้อยู่เหนือ navbar Bootstrap */
+.swal2-container.swal2-toast-above-nav,
+.swal2-container.swal2-toast-front {
+  z-index: 20000 !important;
+}
