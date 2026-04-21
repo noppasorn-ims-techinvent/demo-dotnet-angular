@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Json;
-using backend.Filters;
 using backend.Data;
+using backend.Health;
 using backend.Hubs;
+using backend.Filters;
+using backend.Infrastructure;
 using backend.Middleware;
 using backend.Models.Entities;
 using backend.Options;
@@ -13,7 +15,9 @@ using backend.Services;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NLog;
@@ -30,7 +34,9 @@ try
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 
-    builder.Services.AddControllers(options => options.Filters.Add(new ApiResponseEnvelopeFilter()))
+    builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+    builder.Services.AddProblemDetails();
+    builder.Services.AddControllers(options => options.Filters.Add(new ApiEnvelopeResultFilter()))
         .AddJsonOptions(o =>
         {
             o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -63,6 +69,13 @@ try
 
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<ITraceContext, HttpTraceContext>();
+    builder.Services.AddSingleton<DatabaseHealthCheck>();
+    builder.Services.AddHealthChecks()
+        .AddCheck<DatabaseHealthCheck>("database", failureStatus: HealthStatus.Unhealthy, tags: new[] { "ready", "db" })
+        .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" });
 
     var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
         ?? throw new InvalidOperationException("Jwt configuration is missing.");
@@ -138,6 +151,7 @@ try
         app.UseSwaggerUI();
     }
 
+    app.UseExceptionHandler();
     app.UseMiddleware<CorrelationIdMiddleware>();
     // Local "http" launch profile binds HTTP only; HTTPS redirection then logs
     // "Failed to determine the https port". Redirect only outside Development.
@@ -149,6 +163,14 @@ try
     app.UseCors("Frontend");
     app.UseAuthentication();
     app.UseAuthorization();
+
+    app.MapHealthChecks("/health");
+    app.MapHealthChecks(
+        "/health/live",
+        new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") });
+    app.MapHealthChecks(
+        "/health/ready",
+        new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") });
 
     app.MapControllers();
     app.MapHub<MarketplaceHub>(MarketplaceHub.Path);

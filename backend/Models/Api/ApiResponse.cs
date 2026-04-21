@@ -1,17 +1,17 @@
-namespace backend.Models.Responses;
+namespace backend.Models.Api;
 
 /// <summary>รูปแบบ response มาตรฐานของ API</summary>
 public sealed class ApiResponse
 {
     public bool Success { get; init; }
 
-    public string Message { get; init; } = "success";
+    public string Message { get; init; } = string.Empty;
 
     public string TraceId { get; init; } = string.Empty;
 
     public object? Data { get; init; }
 
-    public static ApiResponse Ok(object? data, string message = "success", string traceId = "") =>
+    public static ApiResponse Ok(object? data, string traceId, string message = "success") =>
         new()
         {
             Success = true,
@@ -20,12 +20,12 @@ public sealed class ApiResponse
             Data = data,
         };
 
-    public static ApiResponse Fail(string message, string traceId, object? data = null) =>
+    public static ApiResponse Fail(string message, string traceId) =>
         new()
         {
             Success = false,
             Message = message,
             TraceId = traceId,
-            Data = data,
+            Data = null,
         };
 }
