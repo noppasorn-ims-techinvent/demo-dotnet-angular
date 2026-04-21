@@ -3,7 +3,7 @@ import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject, signal
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
-import { ProductService } from '../../core/services/product.service';
+import { ProductService } from '../../../core/services/product.service';
 
 @Component({
   selector: 'app-seller-product-form',

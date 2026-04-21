@@ -1,10 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import type { ProductDto } from '../../core/models/api.types';
-import { ThaiBahtPipe } from '../../core/pipes/thai-baht.pipe';
-import { AuthService } from '../../core/services/auth.service';
-import { CartService } from '../../core/services/cart.service';
+import type { ProductDto } from '../../../core/models/api.types';
+import { ThaiBahtPipe } from '../../../core/pipes/thai-baht.pipe';
+import { AuthService } from '../../../core/services/auth.service';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-product-detail',

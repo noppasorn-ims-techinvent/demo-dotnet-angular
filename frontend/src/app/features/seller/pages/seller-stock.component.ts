@@ -3,11 +3,11 @@ import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import Swal from 'sweetalert2';
-import type { ProductDto } from '../../core/models/api.types';
-import { ThaiBahtPipe } from '../../core/pipes/thai-baht.pipe';
-import { AuthService } from '../../core/services/auth.service';
-import { MarketplaceHubService } from '../../core/services/marketplace-hub.service';
-import { ProductService } from '../../core/services/product.service';
+import type { ProductDto } from '../../../core/models/api.types';
+import { ThaiBahtPipe } from '../../../core/pipes/thai-baht.pipe';
+import { AuthService } from '../../../core/services/auth.service';
+import { MarketplaceHubService } from '../../../core/services/marketplace-hub.service';
+import { ProductService } from '../../../core/services/product.service';
 
 @Component({
   selector: 'app-seller-stock',

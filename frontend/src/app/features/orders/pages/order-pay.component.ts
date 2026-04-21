@@ -3,10 +3,10 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, finalize, throwError } from 'rxjs';
-import type { OrderDto } from '../../core/models/api.types';
-import { ThaiBahtPipe } from '../../core/pipes/thai-baht.pipe';
-import { orderStatusLabelTh } from '../../core/utils/order-status';
-import { OrderService, type SimulatePaymentRequest } from '../../core/services/order.service';
+import type { OrderDto } from '../../../core/models/api.types';
+import { ThaiBahtPipe } from '../../../core/pipes/thai-baht.pipe';
+import { orderStatusLabelTh } from '../../../core/utils/order-status';
+import { OrderService, type SimulatePaymentRequest } from '../../../core/services/order.service';
 
 @Component({
   selector: 'app-order-pay',

@@ -10,9 +10,9 @@ import {
   inject,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { ProductDto } from '../../core/models/api.types';
-import { ThaiBahtPipe } from '../../core/pipes/thai-baht.pipe';
-import { AuthService } from '../../core/services/auth.service';
+import type { ProductDto } from '../../../core/models/api.types';
+import { ThaiBahtPipe } from '../../../core/pipes/thai-baht.pipe';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-product-card',
