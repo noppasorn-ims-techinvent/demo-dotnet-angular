@@ -58,6 +58,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(o => o.BuyerId);
             entity.HasIndex(o => o.CreatedAtUtc);
             entity.Property(o => o.TotalAmount).HasPrecision(18, 2);
+            entity.Property(o => o.BuyerCancellationReason).HasMaxLength(500);
+            entity.Property(o => o.CancellationReviewerNote).HasMaxLength(500);
+            entity.Property(o => o.SimulatedPaymentMethod).HasMaxLength(32);
             entity.HasOne(o => o.Buyer).WithMany(u => u.Orders).HasForeignKey(o => o.BuyerId).OnDelete(DeleteBehavior.Restrict);
         });
 

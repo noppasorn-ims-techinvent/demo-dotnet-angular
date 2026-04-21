@@ -1,51 +1,208 @@
-<section class="container py-4" style="max-width: 720px">
-  <h1 class="h2 mb-4">ชำระเงิน</h1>
+<section class="container py-4 checkout-shell">
+  <header class="checkout-hero">
+    <h1>ชำระเงิน</h1>
+
+  </header>
 
   @if (error()) {
     <div class="alert alert-danger" role="alert">{{ error() }}</div>
   }
 
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <div formArrayName="lines">
-      @for (group of lineGroups.controls; track $index; let i = $index) {
-        <div class="card border-0 shadow-sm mb-3" [formGroupName]="i">
-          <div class="card-body">
-            <div class="row g-3 align-items-end">
-              <div class="col-12 col-md-5">
-                <strong>{{ lineProductName(i) }}</strong>
-                <div class="small text-muted">รหัสสินค้า #{{ group.value.productId }}</div>
-                <div class="small mt-1">ราคา {{ lineUnitPrice(i) | thaiBaht }} / ชิ้น</div>
+    <div class="pay-stepper">
+      <div class="pay-step" [class.done]="step() === 2" [class.active]="step() === 1">
+        <span class="num">1</span>
+        <span>สรุปตะกร้า</span>
+      </div>
+      <span class="sep text-muted">›</span>
+      <div class="pay-step" [class.active]="step() === 2">
+        <span class="num">2</span>
+        <span>ชำระเงิน</span>
+      </div>
+    </div>
+
+    @if (step() === 1) {
+      <div formArrayName="lines">
+        @for (group of lineGroups.controls; track $index; let i = $index) {
+          <div class="card border-0 shadow-sm mb-3" [formGroupName]="i">
+            <div class="card-body">
+              <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-5">
+                  <strong>{{ lineProductName(i) }}</strong>
+                  <div class="small text-muted">รหัสสินค้า #{{ group.value.productId }}</div>
+                  <div class="small mt-1">ราคา {{ lineUnitPrice(i) | thaiBaht }} / ชิ้น</div>
+                </div>
+                <div class="col-12 col-md-3">
+                  <label class="form-label mb-0" [attr.for]="'qty-' + i">จำนวน</label>
+                  <input
+                    class="form-control"
+                    type="number"
+                    [id]="'qty-' + i"
+                    formControlName="quantity"
+                    #qty
+                  />
+                </div>
+                <div class="col-12 col-md-4 text-md-end">
+                  <div class="small text-muted mb-1">รวมแถวนี้</div>
+                  <div class="fw-semibold text-primary fs-6">{{ lineAmount(i) | thaiBaht }}</div>
+                  <button type="button" class="btn btn-outline-danger btn-sm mt-2" (click)="removeLine(i)">เอาออกจากตะกร้า</button>
+                </div>
               </div>
-              <div class="col-12 col-md-3">
-                <label class="form-label mb-0" [attr.for]="'qty-' + i">จำนวน</label>
-                <input
-                  class="form-control"
-                  type="number"
-                  [id]="'qty-' + i"
-                  formControlName="quantity"
-                  #qty
-                />
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (lineGroups.length > 0) {
+        <div class="card border-primary border-2 mb-4 bg-light">
+          <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span class="fw-semibold fs-5 mb-0">ยอดที่ต้องชำระ</span>
+            <span class="fs-4 fw-bold text-primary mb-0">{{ checkoutTotal() | thaiBaht }}</span>
+          </div>
+        </div>
+      }
+
+      <button type="button" class="btn btn-primary btn-lg px-4" (click)="goToPaymentStep()">ดำเนินการชำระเงิน</button>
+    } @else {
+      <div class="row g-4 align-items-start">
+        <div class="col-lg-7">
+          @if (payment.get('method')?.value === 'card') {
+            <div class="credit-card-preview" aria-hidden="true">
+              <span class="brand">SECURE CHECKOUT</span>
+              <div class="chip"></div>
+              <div class="pan">{{ cardMaskedPreview() }}</div>
+              <div class="meta">
+                <span>{{ payment.get('cardHolder')?.value || 'ชื่อผู้ถือบัตร' }}</span>
+                <span>{{ payment.get('cardExpiry')?.value || 'ดด/ปป' }}</span>
               </div>
-              <div class="col-12 col-md-4 text-md-end">
-                <div class="small text-muted mb-1">รวมแถวนี้</div>
-                <div class="fw-semibold text-primary fs-6">{{ lineAmount(i) | thaiBaht }}</div>
-                <button type="button" class="btn btn-outline-danger btn-sm mt-2" (click)="removeLine(i)">เอาออกจากตะกร้า</button>
+            </div>
+          }
+
+          <div class="card payment-fields-card border-0" formGroupName="payment">
+            <div class="card-body">
+              <h2 class="h6 text-uppercase text-muted mb-3" style="letter-spacing: 0.06em">เลือกวิธีชำระเงิน</h2>
+
+              <div class="method-pills">
+                <button
+                  type="button"
+                  class="btn"
+                  [class.btn-primary]="payment.get('method')?.value === 'card'"
+                  [class.btn-outline-secondary]="payment.get('method')?.value !== 'card'"
+                  (click)="setPaymentMethod('card'); payment.patchValue({ method: 'card' })"
+                >
+                  บัตรเครดิต / เดบิต
+                </button>
+                <button
+                  type="button"
+                  class="btn"
+                  [class.btn-primary]="payment.get('method')?.value === 'bank'"
+                  [class.btn-outline-secondary]="payment.get('method')?.value !== 'bank'"
+                  (click)="setPaymentMethod('bank'); payment.patchValue({ method: 'bank' })"
+                >
+                  โอนเงินผ่านธนาคาร
+                </button>
+              </div>
+
+              <input type="hidden" formControlName="method" />
+
+              @if (payment.get('method')?.value === 'card') {
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label class="form-label">หมายเลขบัตร</label>
+                    <input
+                      class="form-control form-control-lg font-monospace"
+                      formControlName="cardNumber"
+                      placeholder="4242 4242 4242 4242"
+                      inputmode="numeric"
+                      autocomplete="cc-number"
+                    />
+                    <div class="input-hint">กรอกตัวเลข 12–19 หลัก (ทดสอบได้เช่น 4242 4242 4242 4242)</div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">ชื่อผู้ถือบัตร (ตามที่ปรากฏบนบัตร)</label>
+                    <input class="form-control" formControlName="cardHolder" placeholder="SOMCHAI RAKSADOR" autocomplete="cc-name" />
+                  </div>
+                  <div class="col-6 col-md-4">
+                    <label class="form-label">วันหมดอายุ</label>
+                    <input class="form-control" formControlName="cardExpiry" placeholder="MM/YY" autocomplete="cc-exp" />
+                    <div class="input-hint">รูปแบบ ดด/ปป</div>
+                  </div>
+                  <div class="col-6 col-md-4">
+                    <label class="form-label">รหัสตรวจสอบ (CVV / CVC)</label>
+                    <input class="form-control" formControlName="cardCvv" placeholder="•••" maxlength="4" autocomplete="cc-csc" />
+                    <div class="input-hint">ตัวเลข 3–4 หลัก บนแถบลายเซ็นด้านหลังบัตร</div>
+                  </div>
+                </div>
+              } @else {
+                <div class="bank-vault">
+                  <div class="title">บัญชีรับชำระเงิน (จำลอง)</div>
+                  <div class="merchant">บริษัท ร้านค้าเดโม จำกัด</div>
+                  <div class="acct">เลขบัญชีรับโอน: 999-1-23456-7 (สาขาสำนักงานใหญ่)</div>
+                  <div class="input-hint mt-2 mb-0">โปรดโอนให้ตรงกับยอดในสรุปคำสั่งซื้อด้านขวา แล้วกรอกบัญชีต้นทางของคุณด้านล่าง</div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label">ธนาคารต้นทางของคุณ</label>
+                    <select class="form-select" formControlName="bankCode">
+                      <option value="">— เลือกธนาคาร —</option>
+                      <option value="BBL">ธนาคารกรุงเทพ (BBL)</option>
+                      <option value="KBANK">ธนาคารกสิกรไทย (KBANK)</option>
+                      <option value="SCB">ธนาคารไทยพาณิชย์ (SCB)</option>
+                      <option value="KTB">ธนาคารกรุงไทย (KTB)</option>
+                      <option value="TTB">ทหารไทยธนชาต (TTB)</option>
+                    </select>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label">เลขบัญชีของคุณ (ต้นทาง)</label>
+                    <input
+                      class="form-control font-monospace"
+                      formControlName="bankAccountNumber"
+                      placeholder="1234567890"
+                      inputmode="numeric"
+                      autocomplete="off"
+                    />
+                    <div class="input-hint">ตัวเลข 8–15 หลัก</div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <p class="demo-disclaimer">
+            หน้านี้จำลองประสบการณ์ชำระเงินเท่านั้น ระบบจะสร้างคำสั่งซื้อและตั้งสถานะเป็น «ชำระแล้ว» ทันทีหลังกดปุ่ม — ไม่มีการเรียกเก็บเงินจริง
+          </p>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="card summary-card summary-sticky">
+            <div class="card-header">สรุปคำสั่งซื้อ</div>
+            <div class="card-body">
+              @for (group of lineGroups.controls; track $index; let i = $index) {
+                <div class="summary-line text-body-secondary">
+                  <span>{{ lineProductName(i) }} <span class="text-muted">×{{ group.value.quantity }}</span></span>
+                  <span class="text-nowrap">{{ lineAmount(i) | thaiBaht }}</span>
+                </div>
+              }
+              <div class="summary-total">
+                <span>ยอดชำระ</span>
+                <span class="amt">{{ checkoutTotal() | thaiBaht }}</span>
               </div>
             </div>
           </div>
         </div>
-      }
-    </div>
+      </div>
 
-    @if (lineGroups.length > 0) {
-      <div class="card border-primary border-2 mb-4 bg-light">
-        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <span class="fw-semibold fs-5 mb-0">ราคารวมทั้งหมด</span>
-          <span class="fs-4 fw-bold text-primary mb-0">{{ checkoutTotal() | thaiBaht }}</span>
-        </div>
+      <div class="d-flex flex-wrap gap-2 mt-4">
+        <button type="button" class="btn btn-outline-secondary" (click)="backToCartStep()">← แก้ไขตะกร้า</button>
+        <button type="submit" class="btn btn-success btn-lg pay-submit-btn flex-grow-1 flex-md-grow-0" [disabled]="busy()">
+          @if (busy()) {
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            กำลังดำเนินการ…
+          } @else {
+            ชำระเงิน {{ checkoutTotal() | thaiBaht }}
+          }
+        </button>
       </div>
     }
-
-    <button type="submit" class="btn btn-primary btn-lg" [disabled]="busy()">ยืนยันสั่งซื้อ</button>
   </form>
 </section>

@@ -37,6 +37,11 @@ export interface OrderDto {
   totalAmount: number;
   createdAtUtc: string;
   lines: OrderLineDto[];
+  preCancellationStatus?: number | null;
+  buyerCancellationReason?: string | null;
+  cancellationReviewerNote?: string | null;
+  cancellationReviewedByUserId?: number | null;
+  simulatedPaymentMethod?: string | null;
 }
 
 export interface AppConfigDto {

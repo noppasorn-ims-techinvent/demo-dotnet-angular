@@ -5,10 +5,11 @@ import type { UserDto } from '../models/api.types';
 
 function statusLabelThai(status: string): string {
   const map: Record<string, string> = {
-    Pending: 'รอดำเนินการ',
+    Pending: 'รอชำระเงิน',
     Paid: 'ชำระแล้ว',
     Shipped: 'จัดส่งแล้ว',
     Cancelled: 'ยกเลิก',
+    CancellationPending: 'รอยกเลิก (รอพิจารณา)',
   };
   return map[status] ?? status;
 }
@@ -29,6 +30,8 @@ export class MarketplaceHubService {
 
   /** ให้หน้า orders โหลดรายการใหม่ */
   readonly ordersRefreshTick = signal(0);
+  /** ให้หน้าออเดอร์เข้าร้าน (ผู้ขาย) โหลดรายการใหม่ */
+  readonly storeOrdersRefreshTick = signal(0);
   /** ให้หน้าร้านค้า / ปรับสต็อก โหลดรายการสินค้าใหม่ */
   readonly productDataRefreshTick = signal(0);
   /** true หลัง start + join กลุ่มสำเร็จ (ดีบัก) */
@@ -127,6 +130,7 @@ export class MarketplaceHubService {
 
     this.hub.on('sellerOrderRemovedByAdmin', (payload: { orderId: number }) => {
       this.productDataRefreshTick.update((n) => n + 1);
+      this.storeOrdersRefreshTick.update((n) => n + 1);
       void toastMixin.fire({
         icon: 'warning',
         title: 'คำสั่งซื้อถูกลบโดยแอดมิน',
@@ -136,10 +140,50 @@ export class MarketplaceHubService {
       });
     });
 
+    this.hub.on('storeOrderStatusChanged', (payload: { orderId: number; status: string }) => {
+      this.storeOrdersRefreshTick.update((n) => n + 1);
+      void toastMixin.fire({
+        icon: 'info',
+        title: `ออเดอร์ #${payload.orderId} (ร้านคุณ)`,
+        text: `สถานะ: ${statusLabelThai(payload.status)}`,
+        timer: 5000,
+        timerProgressBar: true,
+      });
+    });
+
+    this.hub.on(
+      'orderCancellationUpdated',
+      (payload: { orderId: number; buyerId: number; kind: string; approved?: boolean }) => {
+        this.ordersRefreshTick.update((n) => n + 1);
+        this.storeOrdersRefreshTick.update((n) => n + 1);
+        if (payload.kind === 'reviewed' && payload.approved === true) {
+          this.productDataRefreshTick.update((n) => n + 1);
+        }
+        const title =
+          payload.kind === 'pending'
+            ? `มีคำขอยกเลิก #${payload.orderId}`
+            : `พิจารณายกเลิก #${payload.orderId}`;
+        const text =
+          payload.kind === 'pending'
+            ? `ผู้ซื้อ #${payload.buyerId} ขอยกเลิก`
+            : payload.approved
+              ? 'อนุมัติยกเลิกแล้ว'
+              : 'ไม่อนุมัติ — สถานะคำสั่งซื้อถูกคืนตามเดิม';
+        void toastMixin.fire({
+          icon: payload.kind === 'pending' ? 'warning' : payload.approved ? 'success' : 'info',
+          title,
+          text,
+          timer: 6500,
+          timerProgressBar: true,
+        });
+      },
+    );
+
     this.hub.on(
       'sellerNewOrder',
       (payload: { orderId: number; buyerId: number; totalAmount: number; lineCount: number }) => {
         this.productDataRefreshTick.update((n) => n + 1);
+        this.storeOrdersRefreshTick.update((n) => n + 1);
         void toastMixin.fire({
           icon: 'success',
           title: 'มีคำสั่งซื้อใหม่',

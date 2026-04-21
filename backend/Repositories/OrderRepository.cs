@@ -56,4 +56,15 @@ public class OrderRepository : IOrderRepository
             .OrderByDescending(o => o.CreatedAtUtc)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Order>> GetBySellerUserIdAsync(int sellerUserId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.Lines)
+            .ThenInclude(l => l.Product)
+            .Where(o => o.Lines.Any(l => l.Product != null && l.Product.SellerId == sellerUserId))
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
 }

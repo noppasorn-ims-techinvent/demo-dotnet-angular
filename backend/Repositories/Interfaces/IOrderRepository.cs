@@ -13,4 +13,7 @@ public interface IOrderRepository
     Task UpdateStatusAsync(Order order, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Order>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>คำสั่งซื้อที่มีอย่างน้อยหนึ่งบรรทัดเป็นสินค้าของผู้ขาย user id นี้</summary>
+    Task<IReadOnlyList<Order>> GetBySellerUserIdAsync(int sellerUserId, CancellationToken cancellationToken = default);
 }

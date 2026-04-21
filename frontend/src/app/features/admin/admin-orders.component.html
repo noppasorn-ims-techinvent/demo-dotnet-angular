@@ -27,22 +27,52 @@
             <td>{{ o.buyerId }}</td>
             <td>{{ o.createdAtUtc | date: 'short' }}</td>
             <td style="min-width: 11rem">
-              <select
-                class="form-select form-select-sm"
-                [ngModel]="o.status"
-                (ngModelChange)="updateStatus(o, $event)"
-                [disabled]="busy()"
-              >
-                @for (opt of statusOptions; track opt.value) {
-                  <option [ngValue]="opt.value">{{ opt.label }}</option>
-                }
-              </select>
+              @if (o.status === 4) {
+                <span class="badge text-bg-warning">{{ statusLabel(o.status) }}</span>
+              } @else {
+                <select
+                  class="form-select form-select-sm"
+                  [ngModel]="o.status"
+                  (ngModelChange)="updateStatus(o, $event)"
+                  [disabled]="busy()"
+                >
+                  @for (opt of statusOptions; track opt.value) {
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              }
             </td>
             <td class="text-nowrap fw-medium">{{ o.totalAmount | thaiBaht }}</td>
             <td>
               <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="busy()" (click)="deleteOrder(o)">ลบ</button>
             </td>
           </tr>
+          @if (o.status === 4) {
+            <tr class="table-warning">
+              <td colspan="6" class="py-3">
+                <div class="small mb-2"><strong>เหตุผลจากลูกค้า:</strong> {{ o.buyerCancellationReason }}</div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-success"
+                    [disabled]="busy()"
+                    (click)="reviewCancellation(o, true)"
+                  >
+                    อนุมัติยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    [disabled]="busy()"
+                    (click)="reviewCancellation(o, false)"
+                  >
+                    ไม่อนุมัติ
+                  </button>
+                </div>
+                <p class="text-muted small mb-0 mt-2">ต้องกรอกหมายเหตุหรือเหตุผลเมื่อกดยืนยัน (แสดงให้ลูกค้า)</p>
+              </td>
+            </tr>
+          }
         }
       </tbody>
     </table>

@@ -31,6 +31,12 @@ export const routes: Routes = [
     canActivate: [authGuard, rolesGuard('Seller', 'Admin')],
   },
   {
+    path: 'seller/orders',
+    loadComponent: () =>
+      import('./features/seller/seller-store-orders.component').then((m) => m.SellerStoreOrdersComponent),
+    canActivate: [authGuard, rolesGuard('Seller', 'Admin')],
+  },
+  {
     path: 'seller/products/new',
     loadComponent: () =>
       import('./features/seller/seller-product-form.component').then((m) => m.SellerProductFormComponent),
@@ -45,6 +51,11 @@ export const routes: Routes = [
   {
     path: 'checkout',
     loadComponent: () => import('./features/orders/checkout.component').then((m) => m.CheckoutComponent),
+    canActivate: [authGuard, rolesGuard('Buyer')],
+  },
+  {
+    path: 'orders/:id/pay',
+    loadComponent: () => import('./features/orders/order-pay.component').then((m) => m.OrderPayComponent),
     canActivate: [authGuard, rolesGuard('Buyer')],
   },
   {

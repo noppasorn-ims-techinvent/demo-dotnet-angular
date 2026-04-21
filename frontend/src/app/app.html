@@ -31,6 +31,9 @@
           }
           @if (auth.hasRole('Seller') || auth.hasRole('Admin')) {
             <li class="nav-item">
+              <a class="nav-link" routerLink="/seller/orders" routerLinkActive="active">ออเดอร์เข้าร้าน</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" routerLink="/seller/stock" routerLinkActive="active">ปรับสต็อก</a>
             </li>
             <li class="nav-item">

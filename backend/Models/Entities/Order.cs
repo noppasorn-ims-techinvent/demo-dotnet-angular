@@ -14,5 +14,17 @@ public class Order : BaseEntity
 
     public DateTime CreatedAtUtc { get; set; }
 
+    /// <summary>สถานะก่อนขอยกเลิก (Pending หรือ Paid) — ใช้คืนสถานะเมื่อไม่อนุมัติ >ยกเลิก</summary>
+    public OrderStatus? PreCancellationStatus { get; set; }
+
+    public string? BuyerCancellationReason { get; set; }
+
+    public string? CancellationReviewerNote { get; set; }
+
+    public int? CancellationReviewedByUserId { get; set; }
+
+    /// <summary>จำลองการชำระ: card / bank</summary>
+    public string? SimulatedPaymentMethod { get; set; }
+
     public ICollection<OrderLine> Lines { get; set; } = new List<OrderLine>();
 }

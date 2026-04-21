@@ -16,10 +16,33 @@
             <strong class="fs-5">#{{ o.id }}</strong>
             <span class="text-muted small ms-2">{{ o.createdAtUtc | date: 'medium' }}</span>
             <div class="small text-secondary mt-1">สถานะ: {{ statusLabel(o.status) }}</div>
+            @if (o.simulatedPaymentMethod) {
+              <div class="small text-muted mt-1">ชำระแบบจำลอง: {{ o.simulatedPaymentMethod }}</div>
+            }
+            @if (o.status === 4 && o.buyerCancellationReason) {
+              <div class="alert alert-light border mt-2 mb-0 py-2 small">
+                <strong>เหตุผลขอยกเลิก:</strong> {{ o.buyerCancellationReason }}
+              </div>
+            }
+            @if (o.cancellationReviewerNote) {
+              <div class="small text-muted mt-2">
+                <strong>คำตอบจากร้าน/แอดมิน:</strong> {{ o.cancellationReviewerNote }}
+              </div>
+            }
           </div>
           <div class="text-md-end">
             <div class="small text-muted">ยอดรวม</div>
             <div class="fw-semibold text-primary fs-6">{{ o.totalAmount | thaiBaht }}</div>
+            <div class="d-flex flex-wrap gap-2 justify-content-md-end mt-2">
+              @if (canPay(o)) {
+                <a class="btn btn-sm btn-primary" [routerLink]="['/orders', o.id, 'pay']">ชำระเงิน</a>
+              }
+              @if (canRequestCancel(o)) {
+                <button type="button" class="btn btn-sm btn-outline-warning" [disabled]="busy()" (click)="requestCancel(o)">
+                  ขอยกเลิก
+                </button>
+              }
+            </div>
           </div>
         </div>
       </li>

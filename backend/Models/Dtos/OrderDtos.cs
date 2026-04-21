@@ -27,6 +27,16 @@ public class OrderDto
     public DateTime CreatedAtUtc { get; set; }
 
     public IReadOnlyList<OrderLineDto> Lines { get; set; } = Array.Empty<OrderLineDto>();
+
+    public OrderStatus? PreCancellationStatus { get; set; }
+
+    public string? BuyerCancellationReason { get; set; }
+
+    public string? CancellationReviewerNote { get; set; }
+
+    public int? CancellationReviewedByUserId { get; set; }
+
+    public string? SimulatedPaymentMethod { get; set; }
 }
 
 public class PlaceOrderLineRequest
@@ -48,4 +58,46 @@ public class PlaceOrderRequest
 public class UpdateOrderStatusRequest
 {
     public OrderStatus Status { get; set; }
+}
+
+public class SimulatePaymentRequest
+{
+    /// <summary>card | bank</summary>
+    [Required]
+    [MaxLength(16)]
+    public string PaymentMethod { get; set; } = string.Empty;
+
+    [MaxLength(32)]
+    public string? CardNumber { get; set; }
+
+    [MaxLength(120)]
+    public string? CardHolder { get; set; }
+
+    [MaxLength(5)]
+    public string? CardExpiry { get; set; }
+
+    [MaxLength(4)]
+    public string? CardCvv { get; set; }
+
+    [MaxLength(32)]
+    public string? BankCode { get; set; }
+
+    [MaxLength(32)]
+    public string? BankAccountNumber { get; set; }
+}
+
+public class RequestCancellationRequest
+{
+    [Required]
+    [MaxLength(500)]
+    public string Reason { get; set; } = string.Empty;
+}
+
+public class ReviewCancellationRequest
+{
+    public bool Approved { get; set; }
+
+    [Required]
+    [MaxLength(500)]
+    public string Note { get; set; } = string.Empty;
 }

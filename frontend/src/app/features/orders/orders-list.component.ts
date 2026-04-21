@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import Swal from 'sweetalert2';
 import type { OrderDto } from '../../core/models/api.types';
 import { ThaiBahtPipe } from '../../core/pipes/thai-baht.pipe';
 import { MarketplaceHubService } from '../../core/services/marketplace-hub.service';
 import { OrderService } from '../../core/services/order.service';
+import { orderStatusLabelTh } from '../../core/utils/order-status';
 
 @Component({
   selector: 'app-orders-list',
@@ -19,6 +21,8 @@ export class OrdersListComponent {
 
   protected readonly orders = signal<OrderDto[]>([]);
   protected readonly error = signal('');
+  protected readonly busy = signal(false);
+  protected readonly statusLabel = orderStatusLabelTh;
 
   constructor() {
     effect(() => {
@@ -34,18 +38,65 @@ export class OrdersListComponent {
     });
   }
 
-  protected statusLabel(value: number): string {
-    switch (value) {
-      case 0:
-        return 'รอดำเนินการ';
-      case 1:
-        return 'ชำระแล้ว';
-      case 2:
-        return 'จัดส่งแล้ว';
-      case 3:
-        return 'ยกเลิก';
-      default:
-        return String(value);
+  protected canPay(o: OrderDto): boolean {
+    return o.status === 0;
+  }
+
+  protected canRequestCancel(o: OrderDto): boolean {
+    return o.status === 0 || o.status === 1;
+  }
+
+  protected async requestCancel(o: OrderDto): Promise<void> {
+    const result = await Swal.fire({
+      title: `ขอยกเลิก #${o.id}`,
+      input: 'textarea',
+      inputLabel: 'เหตุผลที่ต้องการยกเลิก',
+      inputPlaceholder: 'อธิบายสั้น ๆ …',
+      showCancelButton: true,
+      confirmButtonText: 'ส่งคำขอ',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#b45309',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true,
+      inputValidator: (v) => {
+        if (!v?.trim()) {
+          return 'กรุณากรอกเหตุผล';
+        }
+        return null;
+      },
+    });
+
+    if (!result.isConfirmed || !result.value?.trim()) {
+      return;
     }
+
+    this.busy.set(true);
+    this.error.set('');
+    this.ordersApi.requestCancellation(o.id, result.value.trim()).subscribe({
+      next: () => {
+        this.busy.set(false);
+        void Swal.fire({
+          icon: 'success',
+          title: 'ส่งคำขอแล้ว',
+          text: 'รอร้านค้าหรือผู้ดูแลระบบพิจารณา',
+          timer: 2800,
+          showConfirmButton: false,
+        });
+        this.load();
+      },
+      error: (err: unknown) => {
+        this.busy.set(false);
+        const msg =
+          err &&
+          typeof err === 'object' &&
+          'error' in err &&
+          err.error &&
+          typeof err.error === 'object' &&
+          'message' in err.error
+            ? String((err.error as { message: string }).message)
+            : 'ส่งคำขอไม่สำเร็จ';
+        this.error.set(msg);
+      },
+    });
   }
 }
