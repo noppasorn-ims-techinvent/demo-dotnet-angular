@@ -159,6 +159,7 @@ public class OrdersController : BaseApiController
     public async Task<ActionResult<OrderDto>> ReviewCancellationAsync(
         int id,
         [FromBody] ReviewCancellationRequest request,
+        [FromQuery] int? targetSellerUserId,
         CancellationToken cancellationToken)
     {
         var userId = GetUserId();
@@ -167,9 +168,21 @@ public class OrdersController : BaseApiController
             return Unauthorized();
         }
 
+        if (request.TargetSellerUserId is null or < 1 && targetSellerUserId is >= 1)
+        {
+            request.TargetSellerUserId = targetSellerUserId;
+        }
+
         var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToHashSet();
-        var dto = await _orders.ReviewCancellationAsync(userId.Value, roles, id, request, cancellationToken);
-        return dto is null ? NotFound() : Ok(dto);
+        try
+        {
+            var dto = await _orders.ReviewCancellationAsync(userId.Value, roles, id, request, cancellationToken);
+            return dto is null ? NotFound() : Ok(dto);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpDelete("{id:int}")]

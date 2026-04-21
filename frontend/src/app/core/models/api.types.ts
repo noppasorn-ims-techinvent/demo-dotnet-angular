@@ -27,6 +27,10 @@ export interface OrderLineDto {
   productName: string;
   quantity: number;
   unitPrice: number;
+  sellerId: number;
+  sellerDisplayName: string;
+  /** 0 = ปกติ, 1 = รอร้านนี้ตัดสินคำขอยกเลิก */
+  lineCancellationState: number;
 }
 
 export interface OrderDto {
@@ -42,6 +46,7 @@ export interface OrderDto {
   cancellationReviewerNote?: string | null;
   cancellationReviewedByUserId?: number | null;
   simulatedPaymentMethod?: string | null;
+  splitSourceOrderId?: number | null;
 }
 
 export interface AppConfigDto {

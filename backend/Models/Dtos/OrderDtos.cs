@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using backend.Models.Enums;
 
 namespace backend.Models.Dtos;
@@ -12,6 +13,13 @@ public class OrderLineDto
     public int Quantity { get; set; }
 
     public decimal UnitPrice { get; set; }
+
+    public int SellerId { get; set; }
+
+    public string SellerDisplayName { get; set; } = string.Empty;
+
+    /// <summary>OrderLineCancellationState — 1 = รอร้านนี้ตัดสิน</summary>
+    public int LineCancellationState { get; set; }
 }
 
 public class OrderDto
@@ -37,6 +45,8 @@ public class OrderDto
     public int? CancellationReviewedByUserId { get; set; }
 
     public string? SimulatedPaymentMethod { get; set; }
+
+    public int? SplitSourceOrderId { get; set; }
 }
 
 public class PlaceOrderLineRequest
@@ -100,4 +110,8 @@ public class ReviewCancellationRequest
     [Required]
     [MaxLength(500)]
     public string Note { get; set; } = string.Empty;
+
+    /// <summary>เมื่อเป็น Admin ต้องระบุว่าพิจารณาคิวของผู้ขาย user id ใด — ผู้ขายไม่ต้องส่ง</summary>
+    [JsonPropertyName("targetSellerUserId")]
+    public int? TargetSellerUserId { get; set; }
 }

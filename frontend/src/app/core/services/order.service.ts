@@ -54,8 +54,23 @@ export class OrderService {
     return this.http.post<OrderDto>(`/api/Orders/${orderId}/request-cancellation`, { reason });
   }
 
-  reviewCancellation(orderId: number, approved: boolean, note: string): Observable<OrderDto> {
-    return this.http.post<OrderDto>(`/api/Orders/${orderId}/review-cancellation`, { approved, note });
+  /** แอดมินต้องส่ง targetSellerUserId — ผู้ขายไม่ต้องส่ง (พิจารณาเฉพาะร้านตัวเอง) */
+  reviewCancellation(
+    orderId: number,
+    approved: boolean,
+    note: string,
+    targetSellerUserId?: number,
+  ): Observable<OrderDto> {
+    const body: { approved: boolean; note: string; targetSellerUserId?: number } = { approved, note };
+    const validTarget =
+      typeof targetSellerUserId === 'number' &&
+      Number.isFinite(targetSellerUserId) &&
+      targetSellerUserId >= 1;
+    if (validTarget) {
+      body.targetSellerUserId = targetSellerUserId;
+    }
+    const q = validTarget ? `?targetSellerUserId=${encodeURIComponent(String(targetSellerUserId))}` : '';
+    return this.http.post<OrderDto>(`/api/Orders/${orderId}/review-cancellation${q}`, body);
   }
 
   /** คำสั่งซื้อที่มีสินค้าของร้านคุณ (บรรทัดและยอดรวมเฉพาะสินค้าของร้าน) */

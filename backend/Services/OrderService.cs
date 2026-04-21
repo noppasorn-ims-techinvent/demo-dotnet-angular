@@ -83,20 +83,7 @@ public class OrderService : IOrderService
             await _db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            foreach (var sellerId in affectedSellerIds)
-            {
-                await _hub.Clients.Group(MarketplaceHub.SellerGroupName(sellerId))
-                    .SendAsync(
-                        "sellerNewOrder",
-                        new
-                        {
-                            orderId = order.Id,
-                            buyerId,
-                            totalAmount = order.TotalAmount,
-                            lineCount = order.Lines.Count,
-                        },
-                        cancellationToken);
-            }
+            await NotifySellersNewOrderAsync(order.Id, buyerId, order.TotalAmount, order.Lines.Count, affectedSellerIds, cancellationToken);
 
             await _orderQueue.EnqueueAsync(new OrderPlacedMessage(order.Id, buyerId, order.TotalAmount), cancellationToken);
 
@@ -224,7 +211,10 @@ public class OrderService : IOrderService
         RequestCancellationRequest request,
         CancellationToken cancellationToken = default)
     {
-        var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == orderId && o.BuyerId == buyerId, cancellationToken);
+        var order = await _db.Orders
+            .Include(o => o.Lines)
+            .ThenInclude(l => l.Product)
+            .FirstOrDefaultAsync(o => o.Id == orderId && o.BuyerId == buyerId, cancellationToken);
         if (order is null)
         {
             return null;
@@ -232,7 +222,7 @@ public class OrderService : IOrderService
 
         if (order.Status == OrderStatus.CancellationPending)
         {
-            throw new InvalidOperationException("ส่งคำขอยกเลิกแล้ว — รอร้านค้าหรือผู้ดูแลระบบพิจารณา");
+            throw new InvalidOperationException("ส่งคำขอยกเลิกแล้ว — รอแต่ละร้านพิจารณาแยกกัน");
         }
 
         if (order.Status is not (OrderStatus.Pending or OrderStatus.Paid))
@@ -245,6 +235,11 @@ public class OrderService : IOrderService
         order.BuyerCancellationReason = request.Reason.Trim();
         order.CancellationReviewerNote = null;
         order.CancellationReviewedByUserId = null;
+        foreach (var line in order.Lines)
+        {
+            line.LineCancellationState = OrderLineCancellationState.PendingSellerDecision;
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
 
         var full = await _orders.GetByIdWithLinesAsync(order.Id, cancellationToken);
@@ -263,64 +258,287 @@ public class OrderService : IOrderService
         ReviewCancellationRequest request,
         CancellationToken cancellationToken = default)
     {
-        var order = await _db.Orders
-            .Include(o => o.Lines)
-            .ThenInclude(l => l.Product)
-            .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
-
-        if (order is null || order.Status != OrderStatus.CancellationPending)
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        Order? splitChild = null;
+        try
         {
-            return null;
-        }
+            var order = await _db.Orders
+                .Include(o => o.Lines)
+                .ThenInclude(l => l.Product)
+                .ThenInclude(p => p.Seller)
+                .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
 
-        if (!roles.Contains("Admin"))
-        {
-            if (!roles.Contains("Seller"))
+            if (order is null || order.Status != OrderStatus.CancellationPending)
             {
                 return null;
             }
 
-            if (!order.Lines.Any(l => l.Product?.SellerId == reviewerUserId))
+            if (!roles.Contains("Admin") && !order.Lines.Any(l => l.Product?.SellerId == reviewerUserId))
             {
                 return null;
             }
-        }
 
-        if (request.Approved)
-        {
-            foreach (var line in order.Lines)
+            int targetSellerId;
+            var explicitTarget = request.TargetSellerUserId;
+            if (explicitTarget is >= 1)
             {
-                var product = line.Product ?? await _db.Products.FirstOrDefaultAsync(p => p.Id == line.ProductId, cancellationToken);
-                if (product is not null)
+                if (roles.Contains("Admin"))
                 {
-                    product.StockQuantity += line.Quantity;
+                    targetSellerId = explicitTarget.Value;
+                }
+                else if (roles.Contains("Seller") && explicitTarget.Value == reviewerUserId)
+                {
+                    targetSellerId = explicitTarget.Value;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else if (roles.Contains("Seller"))
+            {
+                targetSellerId = reviewerUserId;
+            }
+            else if (roles.Contains("Admin"))
+            {
+                // แอดมินอย่างเดียว (ไม่มี role Seller) แต่ใช้หน้าร้านค้า — สินค้าเป็น seller id = user ตัวเอง
+                if (order.Lines.Any(l =>
+                        l.Product?.SellerId == reviewerUserId
+                        && LineRequiresSellerCancellationReview(l, order.Status)))
+                {
+                    targetSellerId = reviewerUserId;
+                }
+                else
+                {
+                    var pendingSellers = order.Lines
+                        .Where(l => l.Product is not null && LineRequiresSellerCancellationReview(l, order.Status))
+                        .Select(l => l.Product!.SellerId)
+                        .Distinct()
+                        .ToList();
+
+                    if (pendingSellers.Count == 1)
+                    {
+                        targetSellerId = pendingSellers[0];
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            "ผู้ดูแลระบบต้องระบุ TargetSellerUserId (รหัสผู้ขายของร้านที่กำลังพิจารณา) แยกตามร้าน");
+                    }
+                }
+            }
+            else
+            {
+                return null;
+            }
+
+            var targetLines = order.Lines
+                .Where(l =>
+                    l.Product?.SellerId == targetSellerId
+                    && LineRequiresSellerCancellationReview(l, order.Status))
+                .ToList();
+
+            if (targetLines.Count == 0)
+            {
+                throw new InvalidOperationException("ไม่มีรายการของร้านนี้ที่รอพิจารณายกเลิก");
+            }
+
+            var noteTrim = request.Note.Trim();
+            AppendSellerCancellationNote(order, targetSellerId, noteTrim);
+            order.CancellationReviewedByUserId = reviewerUserId;
+
+            var amountDelta = targetLines.Sum(l => l.UnitPrice * l.Quantity);
+
+            if (request.Approved)
+            {
+                foreach (var line in targetLines)
+                {
+                    var product = line.Product ?? await _db.Products.FirstOrDefaultAsync(p => p.Id == line.ProductId, cancellationToken);
+                    if (product is not null)
+                    {
+                        product.StockQuantity += line.Quantity;
+                    }
+
+                    _db.OrderLines.Remove(line);
+                }
+
+                order.TotalAmount -= amountDelta;
+                if (order.TotalAmount < 0)
+                {
+                    order.TotalAmount = 0;
+                }
+            }
+            else
+            {
+                splitChild = new Order
+                {
+                    BuyerId = order.BuyerId,
+                    Status = order.PreCancellationStatus ?? OrderStatus.Paid,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    TotalAmount = amountDelta,
+                    SplitSourceOrderId = order.Id,
+                    SimulatedPaymentMethod = order.SimulatedPaymentMethod,
+                };
+
+                foreach (var line in targetLines)
+                {
+                    splitChild.Lines.Add(
+                        new OrderLine
+                        {
+                            ProductId = line.ProductId,
+                            Quantity = line.Quantity,
+                            UnitPrice = line.UnitPrice,
+                            LineCancellationState = OrderLineCancellationState.None,
+                        });
+                    _db.OrderLines.Remove(line);
+                }
+
+                order.TotalAmount -= amountDelta;
+                if (order.TotalAmount < 0)
+                {
+                    order.TotalAmount = 0;
+                }
+
+                await _db.Orders.AddAsync(splitChild, cancellationToken);
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var parentId = order.Id;
+            var buyerId = order.BuyerId;
+            var parentRemoved = false;
+
+            if (splitChild is not null)
+            {
+                var childFull = await _db.Orders
+                    .Include(o => o.Lines)
+                    .ThenInclude(l => l.Product)
+                    .ThenInclude(p => p.Seller)
+                    .AsNoTracking()
+                    .FirstAsync(o => o.Id == splitChild.Id, cancellationToken);
+                var childSellerIds = childFull.Lines
+                    .Where(l => l.Product is not null)
+                    .Select(l => l.Product!.SellerId)
+                    .Distinct()
+                    .ToList();
+                await NotifySellersNewOrderAsync(
+                    childFull.Id,
+                    childFull.BuyerId,
+                    childFull.TotalAmount,
+                    childFull.Lines.Count,
+                    childSellerIds,
+                    cancellationToken);
+            }
+
+            var orderStillCancellationPending = order.Status == OrderStatus.CancellationPending;
+            var anyPending = await _db.OrderLines.AnyAsync(
+                l =>
+                    l.OrderId == parentId
+                    && (
+                        l.LineCancellationState == OrderLineCancellationState.PendingSellerDecision
+                        || (orderStillCancellationPending
+                            && l.LineCancellationState == OrderLineCancellationState.None)),
+                cancellationToken);
+
+            if (!anyPending)
+            {
+                var remainingCount = await _db.OrderLines.CountAsync(l => l.OrderId == parentId, cancellationToken);
+                if (remainingCount == 0)
+                {
+                    _db.Orders.Remove(order);
+                    await _db.SaveChangesAsync(cancellationToken);
+                    parentRemoved = true;
+                }
+                else
+                {
+                    order.Status = order.PreCancellationStatus ?? OrderStatus.Paid;
+                    order.PreCancellationStatus = null;
+                    order.BuyerCancellationReason = null;
+                    foreach (var rl in order.Lines)
+                    {
+                        rl.LineCancellationState = OrderLineCancellationState.None;
+                    }
+
+                    order.TotalAmount = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+                    await _db.SaveChangesAsync(cancellationToken);
                 }
             }
 
-            order.Status = OrderStatus.Cancelled;
-            order.PreCancellationStatus = null;
-            order.CancellationReviewerNote = request.Note.Trim();
-            order.CancellationReviewedByUserId = reviewerUserId;
-        }
-        else
-        {
-            order.Status = order.PreCancellationStatus ?? OrderStatus.Paid;
-            order.PreCancellationStatus = null;
-            order.CancellationReviewerNote = request.Note.Trim();
-            order.CancellationReviewedByUserId = reviewerUserId;
-        }
+            await transaction.CommitAsync(cancellationToken);
 
-        await _db.SaveChangesAsync(cancellationToken);
+            if (parentRemoved)
+            {
+                await _hub.Clients.Group(MarketplaceHub.BuyerGroupName(buyerId))
+                    .SendAsync("buyerOrderDeletedByAdmin", new { orderId = parentId }, cancellationToken);
 
-        var full = await _orders.GetByIdWithLinesAsync(order.Id, cancellationToken);
-        if (full is null)
-        {
+                if (splitChild is not null)
+                {
+                    var childDto = await _orders.GetByIdWithLinesAsync(splitChild.Id, cancellationToken);
+                    if (childDto is not null)
+                    {
+                        await BroadcastOrderStatusAsync(childDto, cancellationToken);
+                        return Map(childDto);
+                    }
+                }
+
+                var newest = await _db.Orders
+                    .AsNoTracking()
+                    .Include(o => o.Lines)
+                    .ThenInclude(l => l.Product)
+                    .ThenInclude(p => p.Seller)
+                    .Where(o => o.BuyerId == buyerId)
+                    .OrderByDescending(o => o.CreatedAtUtc)
+                    .FirstOrDefaultAsync(cancellationToken);
+                return newest is null ? null : Map(newest);
+            }
+
+            var full = await _orders.GetByIdWithLinesAsync(parentId, cancellationToken);
+            if (full is not null)
+            {
+                await BroadcastOrderStatusAsync(full, cancellationToken);
+                await BroadcastCancellationHubAsync(full, request.Approved, cancellationToken);
+                return Map(full);
+            }
+
             return null;
         }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
 
-        await BroadcastOrderStatusAsync(full, cancellationToken);
-        await BroadcastCancellationHubAsync(full, (bool?)request.Approved, cancellationToken);
-        return Map(full);
+    private static void AppendSellerCancellationNote(Order order, int sellerUserId, string note)
+    {
+        var block = $"[ร้าน user #{sellerUserId}] {note}";
+        order.CancellationReviewerNote = string.IsNullOrEmpty(order.CancellationReviewerNote)
+            ? block
+            : order.CancellationReviewerNote + "\n" + block;
+    }
+
+    private async Task NotifySellersNewOrderAsync(
+        int orderId,
+        int buyerId,
+        decimal totalAmount,
+        int lineCount,
+        IEnumerable<int> sellerIds,
+        CancellationToken cancellationToken)
+    {
+        foreach (var sellerId in sellerIds.Distinct())
+        {
+            await _hub.Clients.Group(MarketplaceHub.SellerGroupName(sellerId))
+                .SendAsync(
+                    "sellerNewOrder",
+                    new
+                    {
+                        orderId,
+                        buyerId,
+                        totalAmount,
+                        lineCount,
+                    },
+                    cancellationToken);
+        }
     }
 
     public async Task<bool> DeleteOrderAsync(int orderId, CancellationToken cancellationToken = default)
@@ -464,13 +682,7 @@ public class OrderService : IOrderService
             Status = o.Status,
             TotalAmount = o.TotalAmount,
             CreatedAtUtc = o.CreatedAtUtc,
-            Lines = o.Lines.Select(l => new OrderLineDto
-            {
-                ProductId = l.ProductId,
-                ProductName = l.Product?.Name ?? string.Empty,
-                Quantity = l.Quantity,
-                UnitPrice = l.UnitPrice,
-            }).ToList(),
+            Lines = o.Lines.Select(l => MapLineDto(l, o.Status)).ToList(),
         };
         CopyLifecycle(o, dto);
         return dto;
@@ -483,6 +695,34 @@ public class OrderService : IOrderService
         dto.CancellationReviewerNote = o.CancellationReviewerNote;
         dto.CancellationReviewedByUserId = o.CancellationReviewedByUserId;
         dto.SimulatedPaymentMethod = o.SimulatedPaymentMethod;
+        dto.SplitSourceOrderId = o.SplitSourceOrderId;
+    }
+
+    /// <summary>
+    /// ออเดอร์เก่าที่อยู่สถานะรอยกเลิกแต่บรรทัดยังเป็น None (ก่อนมีคอลัมน์/ก่อนตั้งค่า) ให้ถือว่ารอร้านพิจารณา
+    /// </summary>
+    private static bool LineRequiresSellerCancellationReview(OrderLine l, OrderStatus orderStatus) =>
+        l.LineCancellationState == OrderLineCancellationState.PendingSellerDecision
+        || (orderStatus == OrderStatus.CancellationPending
+            && l.LineCancellationState == OrderLineCancellationState.None);
+
+    private static int EffectiveLineCancellationStateForDto(OrderLine l, OrderStatus orderStatus) =>
+        LineRequiresSellerCancellationReview(l, orderStatus)
+            ? (int)OrderLineCancellationState.PendingSellerDecision
+            : (int)l.LineCancellationState;
+
+    private static OrderLineDto MapLineDto(OrderLine l, OrderStatus orderStatus)
+    {
+        return new OrderLineDto
+        {
+            ProductId = l.ProductId,
+            ProductName = l.Product?.Name ?? string.Empty,
+            Quantity = l.Quantity,
+            UnitPrice = l.UnitPrice,
+            SellerId = l.Product?.SellerId ?? 0,
+            SellerDisplayName = l.Product?.Seller?.DisplayName ?? string.Empty,
+            LineCancellationState = EffectiveLineCancellationStateForDto(l, orderStatus),
+        };
     }
 
     /// <summary>มุมมองร้าน:เฉพาะบรรทัดที่ Product.SellerId ตรงกับร้าน — TotalAmount เป็นยอดรวมเฉพาะบรรทัดเหล่านั้น</summary>
@@ -490,13 +730,7 @@ public class OrderService : IOrderService
     {
         var lines = o.Lines
             .Where(l => l.Product?.SellerId == sellerUserId)
-            .Select(l => new OrderLineDto
-            {
-                ProductId = l.ProductId,
-                ProductName = l.Product?.Name ?? string.Empty,
-                Quantity = l.Quantity,
-                UnitPrice = l.UnitPrice,
-            })
+            .Select(l => MapLineDto(l, o.Status))
             .ToList();
         var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
         var dto = new OrderDto

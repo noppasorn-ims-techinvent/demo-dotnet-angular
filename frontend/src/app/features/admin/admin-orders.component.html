@@ -47,29 +47,47 @@
               <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="busy()" (click)="deleteOrder(o)">ลบ</button>
             </td>
           </tr>
-          @if (o.status === 4) {
+          @if (o.status === 4 && orderDetails()[o.id]; as d) {
             <tr class="table-warning">
               <td colspan="6" class="py-3">
                 <div class="small mb-2"><strong>เหตุผลจากลูกค้า:</strong> {{ o.buyerCancellationReason }}</div>
-                <div class="d-flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-success"
-                    [disabled]="busy()"
-                    (click)="reviewCancellation(o, true)"
-                  >
-                    อนุมัติยกเลิก
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    [disabled]="busy()"
-                    (click)="reviewCancellation(o, false)"
-                  >
-                    ไม่อนุมัติ
-                  </button>
-                </div>
-                <p class="text-muted small mb-0 mt-2">ต้องกรอกหมายเหตุหรือเหตุผลเมื่อกดยืนยัน (แสดงให้ลูกค้า)</p>
+                <p class="small text-muted mb-2">
+                  พิจารณา <strong>แยกตามร้าน</strong> — อนุมัติ = ยกเลิกเฉพาะสินค้าของร้านนั้น · ไม่อนุมัติ = แยกสินค้าของร้านนั้นไปออเดอร์ใหม่
+                </p>
+                @for (bucket of pendingSellerBuckets(d); track bucket.sellerId) {
+                  <div class="card border mb-3 bg-white">
+                    <div class="card-body py-2">
+                      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <strong>ร้าน: {{ bucket.displayName }}</strong>
+                        <span class="small text-muted">ผู้ขาย #{{ bucket.sellerId }}</span>
+                      </div>
+                      <ul class="small mb-2 ps-3">
+                        @for (line of bucket.lines; track line.productId) {
+                          <li>{{ line.productName }} × {{ line.quantity }}</li>
+                        }
+                      </ul>
+                      <div class="d-flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-success"
+                          [disabled]="busy()"
+                          (click)="reviewCancellation(o, bucket.sellerId, true)"
+                        >
+                          อนุมัติยกเลิก (ร้านนี้)
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-danger"
+                          [disabled]="busy()"
+                          (click)="reviewCancellation(o, bucket.sellerId, false)"
+                        >
+                          ไม่อนุมัติ (แยกออเดอร์)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                }
+                <p class="text-muted small mb-0">ต้องกรอกหมายเหตุหรือเหตุผลเมื่อกดยืนยัน (แสดงให้ลูกค้า)</p>
               </td>
             </tr>
           }

@@ -3,11 +3,18 @@ import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import Swal from 'sweetalert2';
-import type { OrderDto } from '../../core/models/api.types';
+import { forkJoin } from 'rxjs';
+import type { OrderDto, OrderLineDto } from '../../core/models/api.types';
 import { ThaiBahtPipe } from '../../core/pipes/thai-baht.pipe';
 import { MarketplaceHubService } from '../../core/services/marketplace-hub.service';
 import { OrderService } from '../../core/services/order.service';
 import { orderStatusLabelTh } from '../../core/utils/order-status';
+
+export interface SellerCancelBucket {
+  sellerId: number;
+  displayName: string;
+  lines: OrderLineDto[];
+}
 
 @Component({
   selector: 'app-admin-orders',
@@ -21,6 +28,8 @@ export class AdminOrdersComponent {
   private readonly hub = inject(MarketplaceHubService);
 
   protected readonly orders = signal<OrderDto[]>([]);
+  /** รายละเอียดเต็มสำหรับออเดอร์ที่รอยกเลิก (แยกร้าน) */
+  protected readonly orderDetails = signal<Record<number, OrderDto>>({});
   protected readonly error = signal('');
   protected readonly busy = signal(false);
   protected readonly statusLabel = orderStatusLabelTh;
@@ -41,9 +50,50 @@ export class AdminOrdersComponent {
 
   protected reload(): void {
     this.ordersApi.getAll().subscribe({
-      next: (o) => this.orders.set(o),
+      next: (list) => {
+        this.orders.set(list);
+        const pending = list.filter((o) => o.status === 4);
+        if (pending.length === 0) {
+          this.orderDetails.set({});
+          return;
+        }
+        forkJoin(pending.map((o) => this.ordersApi.getById(o.id))).subscribe({
+          next: (details) => {
+            const rec: Record<number, OrderDto> = {};
+            pending.forEach((o, i) => {
+              rec[o.id] = details[i]!;
+            });
+            this.orderDetails.set(rec);
+          },
+          error: () => this.error.set('โหลดรายละเอียดคำขอยกเลิกไม่สำเร็จ'),
+        });
+      },
       error: () => this.error.set('โหลดคำสั่งซื้อไม่สำเร็จ'),
     });
+  }
+
+  protected pendingSellerBuckets(detail: OrderDto): SellerCancelBucket[] {
+    if (detail.status !== 4) {
+      return [];
+    }
+    const map = new Map<number, SellerCancelBucket>();
+    for (const line of detail.lines) {
+      const st = line.lineCancellationState ?? 1;
+      if (st !== 1 && st !== 0) {
+        continue;
+      }
+      const cur = map.get(line.sellerId);
+      if (cur) {
+        cur.lines.push(line);
+      } else {
+        map.set(line.sellerId, {
+          sellerId: line.sellerId,
+          displayName: line.sellerDisplayName || `ผู้ขาย #${line.sellerId}`,
+          lines: [line],
+        });
+      }
+    }
+    return [...map.values()];
   }
 
   protected updateStatus(order: OrderDto, status: number): void {
@@ -67,9 +117,9 @@ export class AdminOrdersComponent {
     });
   }
 
-  protected async reviewCancellation(order: OrderDto, approved: boolean): Promise<void> {
+  protected async reviewCancellation(order: OrderDto, targetSellerUserId: number, approved: boolean): Promise<void> {
     const result = await Swal.fire({
-      title: approved ? 'อนุมัติยกเลิกคำสั่งซื้อ' : 'ไม่อนุมัติคำขอยกเลิก',
+      title: approved ? 'อนุมัติยกเลิก (เฉพาะร้านนี้)' : 'ไม่อนุมัติ — แยกเป็นออเดอร์ร้านนี้',
       input: 'textarea',
       inputLabel: approved ? 'หมายเหตุ (แสดงให้ลูกค้า)' : 'เหตุผลที่ไม่อนุมัติ',
       inputPlaceholder: approved ? 'เช่น ยืนยันยกเลิกตามคำขอ' : 'อธิบายเหตุผล…',
@@ -88,20 +138,30 @@ export class AdminOrdersComponent {
 
     this.error.set('');
     this.busy.set(true);
-    this.ordersApi.reviewCancellation(order.id, approved, result.value.trim()).subscribe({
+    this.ordersApi.reviewCancellation(order.id, approved, result.value.trim(), targetSellerUserId).subscribe({
       next: async () => {
         this.busy.set(false);
         await Swal.fire({
           icon: 'success',
           title: approved ? 'อนุมัติแล้ว' : 'บันทึกแล้ว',
-          timer: 2000,
+          text: approved ? 'ยกเลิกเฉพาะสินค้าของร้านที่เลือก' : 'สินค้าของร้านนี้ถูกแยกไปออเดอร์ใหม่',
+          timer: 2400,
           showConfirmButton: false,
         });
         this.reload();
       },
-      error: async () => {
+      error: async (err: unknown) => {
         this.busy.set(false);
-        await Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ' });
+        const msg =
+          err &&
+          typeof err === 'object' &&
+          'error' in err &&
+          err.error &&
+          typeof err.error === 'object' &&
+          'message' in err.error
+            ? String((err.error as { message: string }).message)
+            : 'ดำเนินการไม่สำเร็จ';
+        await Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ', text: msg });
       },
     });
   }

@@ -1,3 +1,5 @@
+using backend.Models.Enums;
+
 namespace backend.Models.Entities;
 
 public class OrderLine : BaseEntity
@@ -13,4 +15,6 @@ public class OrderLine : BaseEntity
     public int Quantity { get; set; }
 
     public decimal UnitPrice { get; set; }
+
+    public OrderLineCancellationState LineCancellationState { get; set; }
 }

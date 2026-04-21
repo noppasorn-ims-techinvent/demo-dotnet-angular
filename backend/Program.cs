@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using backend.Data;
 using backend.Hubs;
 using backend.Middleware;
@@ -28,7 +29,11 @@ try
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers().AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {

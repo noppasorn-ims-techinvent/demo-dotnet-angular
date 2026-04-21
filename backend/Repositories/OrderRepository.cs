@@ -20,6 +20,7 @@ public class OrderRepository : IOrderRepository
             .AsNoTracking()
             .Include(o => o.Lines)
             .ThenInclude(l => l.Product)
+            .ThenInclude(p => p.Seller)
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
     }
 
@@ -29,6 +30,7 @@ public class OrderRepository : IOrderRepository
             .AsNoTracking()
             .Include(o => o.Lines)
             .ThenInclude(l => l.Product)
+            .ThenInclude(p => p.Seller)
             .Where(o => o.BuyerId == buyerId)
             .OrderByDescending(o => o.CreatedAtUtc)
             .ToListAsync(cancellationToken);
@@ -53,6 +55,7 @@ public class OrderRepository : IOrderRepository
             .AsNoTracking()
             .Include(o => o.Lines)
             .ThenInclude(l => l.Product)
+            .ThenInclude(p => p.Seller)
             .OrderByDescending(o => o.CreatedAtUtc)
             .ToListAsync(cancellationToken);
     }
@@ -63,6 +66,7 @@ public class OrderRepository : IOrderRepository
             .AsNoTracking()
             .Include(o => o.Lines)
             .ThenInclude(l => l.Product)
+            .ThenInclude(p => p.Seller)
             .Where(o => o.Lines.Any(l => l.Product != null && l.Product.SellerId == sellerUserId))
             .OrderByDescending(o => o.CreatedAtUtc)
             .ToListAsync(cancellationToken);
