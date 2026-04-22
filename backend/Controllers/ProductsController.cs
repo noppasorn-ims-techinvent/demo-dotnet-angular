@@ -35,6 +35,7 @@ public class ProductsController : ControllerBase
             Message = _appSettings.SuccessMessage.Success,
             Data = list,
         };
+
         return result;
     }
 

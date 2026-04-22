@@ -38,27 +38,18 @@ public class OrdersController : ControllerBase
             return result;
         }
 
-        try
-        {
-            var order = await _orders.PlaceOrderAsync(buyerId.Value, request, cancellationToken);
-            if (order is null)
-            {
-                result.Success = false;
-                result.Message = _appSettings.ErrorMessage.InvalidOrderLines;
-                return result;
-            }
-
-            result.Success = true;
-            result.Message = _appSettings.SuccessMessage.Success;
-            result.Data = order;
-            return result;
-        }
-        catch (InvalidOperationException ex)
+        var order = await _orders.PlaceOrderAsync(buyerId.Value, request, cancellationToken);
+        if (order is null)
         {
             result.Success = false;
-            result.Message = ex.Message;
+            result.Message = _appSettings.ErrorMessage.InvalidOrderLines;
             return result;
         }
+
+        result.Success = true;
+        result.Message = _appSettings.SuccessMessage.Success;
+        result.Data = order;
+        return result;
     }
 
     [HttpGet]
@@ -145,27 +136,18 @@ public class OrdersController : ControllerBase
     public async Task<Result<OrderDto>> UpdateStatusAsync(int id, [FromBody] UpdateOrderStatusRequest request, CancellationToken cancellationToken)
     {
         Result<OrderDto> result = new(_trace);
-        try
-        {
-            var updated = await _orders.UpdateStatusAsync(id, request.Status, cancellationToken);
-            if (updated is null)
-            {
-                result.Success = false;
-                result.Message = _appSettings.ErrorMessage.NotFound;
-                return result;
-            }
-
-            result.Success = true;
-            result.Message = _appSettings.SuccessMessage.Success;
-            result.Data = updated;
-            return result;
-        }
-        catch (InvalidOperationException ex)
+        var updated = await _orders.UpdateStatusAsync(id, request.Status, cancellationToken);
+        if (updated is null)
         {
             result.Success = false;
-            result.Message = ex.Message;
+            result.Message = _appSettings.ErrorMessage.NotFound;
             return result;
         }
+
+        result.Success = true;
+        result.Message = _appSettings.SuccessMessage.Success;
+        result.Data = updated;
+        return result;
     }
 
     [HttpPost("{id:int}/simulate-payment")]
@@ -184,27 +166,18 @@ public class OrdersController : ControllerBase
             return result;
         }
 
-        try
-        {
-            var dto = await _orders.SimulatePaymentAsync(buyerId.Value, id, request, cancellationToken);
-            if (dto is null)
-            {
-                result.Success = false;
-                result.Message = _appSettings.ErrorMessage.NotFound;
-                return result;
-            }
-
-            result.Success = true;
-            result.Message = _appSettings.SuccessMessage.Success;
-            result.Data = dto;
-            return result;
-        }
-        catch (InvalidOperationException ex)
+        var dto = await _orders.SimulatePaymentAsync(buyerId.Value, id, request, cancellationToken);
+        if (dto is null)
         {
             result.Success = false;
-            result.Message = ex.Message;
+            result.Message = _appSettings.ErrorMessage.NotFound;
             return result;
         }
+
+        result.Success = true;
+        result.Message = _appSettings.SuccessMessage.Success;
+        result.Data = dto;
+        return result;
     }
 
     [HttpPost("{id:int}/request-cancellation")]
@@ -223,27 +196,18 @@ public class OrdersController : ControllerBase
             return result;
         }
 
-        try
-        {
-            var dto = await _orders.RequestCancellationAsync(buyerId.Value, id, request, cancellationToken);
-            if (dto is null)
-            {
-                result.Success = false;
-                result.Message = _appSettings.ErrorMessage.NotFound;
-                return result;
-            }
-
-            result.Success = true;
-            result.Message = _appSettings.SuccessMessage.Success;
-            result.Data = dto;
-            return result;
-        }
-        catch (InvalidOperationException ex)
+        var dto = await _orders.RequestCancellationAsync(buyerId.Value, id, request, cancellationToken);
+        if (dto is null)
         {
             result.Success = false;
-            result.Message = ex.Message;
+            result.Message = _appSettings.ErrorMessage.NotFound;
             return result;
         }
+
+        result.Success = true;
+        result.Message = _appSettings.SuccessMessage.Success;
+        result.Data = dto;
+        return result;
     }
 
     [HttpPost("{id:int}/review-cancellation")]
@@ -269,27 +233,18 @@ public class OrdersController : ControllerBase
         }
 
         var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToHashSet();
-        try
-        {
-            var dto = await _orders.ReviewCancellationAsync(userId.Value, roles, id, request, cancellationToken);
-            if (dto is null)
-            {
-                result.Success = false;
-                result.Message = _appSettings.ErrorMessage.NotFound;
-                return result;
-            }
-
-            result.Success = true;
-            result.Message = _appSettings.SuccessMessage.Success;
-            result.Data = dto;
-            return result;
-        }
-        catch (InvalidOperationException ex)
+        var dto = await _orders.ReviewCancellationAsync(userId.Value, roles, id, request, cancellationToken);
+        if (dto is null)
         {
             result.Success = false;
-            result.Message = ex.Message;
+            result.Message = _appSettings.ErrorMessage.NotFound;
             return result;
         }
+
+        result.Success = true;
+        result.Message = _appSettings.SuccessMessage.Success;
+        result.Data = dto;
+        return result;
     }
 
     [HttpDelete("{id:int}")]
