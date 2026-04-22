@@ -197,9 +197,9 @@
 
 **ทำไมมี JSON กำหนดเอง:** ใช้ **ResponseWriter** สร้าง body เป็น `ServerStatus` + รายการ dependency (ชื่อแต่ละ check, สถานะ, ประเภท Server/Component) และบังคับ **HTTP 200** ทุกสถานะ (Healthy / Degraded / Unhealthy) — มอนิเตอร์อ่านรายละเอียดจาก JSON ได้เสมอโดยไม่ต้องพึ่งแค่รหัส HTTP
 
-**โปรเจกต์ทำอะไร:** `/health`, `/health/live`, `/health/ready` — ready รวมการต่อ SQL ผ่าน `DatabaseHealthCheck`; live เป็น check ตัวเบา; body เป็น JSON ตาม DTO ใน `DTO/HealthCheck/`
+**โปรเจกต์ทำอะไร:** ลงทะเบียน `AddHealthChecks().AddDbContextCheck<AppDbContext>(name: "Database", tags: "ready")` แล้วต่อด้วย `AddCheck("self", …, tags: "live")` ให้สอดคล้องกับ `MapHealthChecks` แยก `/health`, `/health/live`, `/health/ready` (ready = DB, live = ตัวเบา); body เป็น JSON ตาม DTO ใน `DTO/HealthCheck/`
 
-**อ้างอิง:** `Health/DatabaseHealthCheck.cs`, `DTO/HealthCheck/`, `Program.cs` (`MapHealthChecks`, `JsonHealthCheckResponseWriter`)
+**อ้างอิง:** `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore` (ใน `backend.csproj`); `DTO/HealthCheck/`; `Program.cs` (`AddDbContextCheck`, `AddCheck` สำหรับ liveness, `MapHealthChecks`, `JsonHealthCheckResponseWriter`)
 
 ---
 

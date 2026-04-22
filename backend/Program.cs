@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using backend.Data;
 using backend.DTO.HealthCheck;
-using backend.Health;
 using backend.Hubs;
 using backend.Utilities;
 using backend.Utilities.Interface;
@@ -81,9 +80,8 @@ try
 
     #region Health check
 
-    services.AddSingleton<DatabaseHealthCheck>();
     services.AddHealthChecks()
-        .AddCheck<DatabaseHealthCheck>("database", failureStatus: HealthStatus.Unhealthy, tags: new[] { "ready", "db" })
+        .AddDbContextCheck<AppDbContext>(name: "Database", tags: new[] { "ready" })
         .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" });
 
     #endregion
