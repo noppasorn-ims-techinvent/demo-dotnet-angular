@@ -115,7 +115,7 @@
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
 | แยกรับคำขอ / กฎ / อ่านเขียน DB | `backend/Controllers/` ไฟล์ใดก็ได้ + `backend/Services/OrderService.cs` + `backend/Repositories/OrderRepository.cs` | สาธิต flow หนึ่งเส้น เช่น ออเดอร์ |
-| เส้นทาง URL = ชื่อเมธอด | `backend/Utilities/Constant.cs` + controller | `api/[controller]/[action]` — ฝั่งเว็บเรียกเช่น `.../GetByIdAsync/1` ตรงกับเมธอด |
+| เส้นทาง URL = ชื่อ action ใน route | `backend/Utilities/Constant.cs` + controller | `api/[controller]/[action]` — ค่าเริ่มต้น **ตัด suffix `Async`** ฝั่งเว็บเรียกเช่น `.../GetById/1` คู่กับเมธอด `GetByIdAsync` |
 
 ---
 

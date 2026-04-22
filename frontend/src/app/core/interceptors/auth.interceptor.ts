@@ -15,7 +15,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse && err.status === 401) {
         const url = authReq.url;
-        if (url.includes('/api/Auth/LoginAsync') || url.includes('/api/Auth/RegisterAsync')) {
+        if (url.includes('/api/Auth/Login') || url.includes('/api/Auth/Register')) {
           return throwError(() => err);
         }
 

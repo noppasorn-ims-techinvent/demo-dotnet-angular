@@ -106,11 +106,11 @@
 
 ### เส้นทาง Controller (`api/[controller]/[action]`)
 
-**คืออะไร:** ค่าคงที่ **`Constant.AuthorizeConfig.RouteController`** ใน `Utilities/Constant.cs` กำหนดให้ URL มีทั้งชื่อ controller และชื่อเมธอด action (เช่น `/api/Products/GetCatalogAsync`)
+**คืออะไร:** ค่าคงที่ **`Constant.AuthorizeConfig.RouteController`** ใน `Utilities/Constant.cs` กำหนดให้ URL มีทั้งชื่อ controller และชื่อ action ใน route (ค่าเริ่มต้นตัด `Async` ออก — เช่นเมธอด `GetCatalogAsync` → `/api/Products/GetCatalog`)
 
 **ทำไม:** แต่ละ endpoint ชี้ชัดจากชื่อเมธอดในโค้ด ลดการซ้อนเทมเพลตสตริง `"login"` / `"mine"` ซ้ำ; เมื่อมีหลาย `HttpPost`/`HttpGet` คล้ายกัน แยกกันด้วยชื่อ action ได้ไม่งง; เก็บรูปแบบเส้นทางไว้ที่เดียวแก้ทีหลังง่าย
 
-**ทำได้อะไร:** อ่าน Swagger หรือโค้ดแล้วรู้ทันทีว่าเมธอดไหนตรงกับ URL ไหน; ฝั่ง Angular เรียกเป็นชื่อ action ที่ตรงกับเซิร์ฟเวอร์ (เช่น `LoginAsync`, `GetByIdAsync`)
+**ทำได้อะไร:** อ่าน Swagger หรือโค้ดแล้วรู้ทันทีว่าเมธอดไหนตรงกับ URL ไหน; ฝั่ง Angular เรียก **ชื่อใน route** (ค่าเริ่มต้น ASP.NET Core จะ **ตัด suffix `Async` ออกจากชื่อ action ใน URL** — เช่นเมธอด `LoginAsync` → path `/api/Auth/Login`)
 
 **อ้างอิง:** `Utilities/Constant.cs`, `Controllers/`
 

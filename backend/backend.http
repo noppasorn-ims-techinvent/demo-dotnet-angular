@@ -1,5 +1,5 @@
 ### Public catalog
-GET http://localhost:5197/api/Products/GetCatalogAsync
+GET http://localhost:5197/api/Products/GetCatalog
 Accept: application/json
 
 ### App config (used by Angular provideAppInitializer)
@@ -7,7 +7,7 @@ GET http://localhost:5197/api/App/GetConfig
 Accept: application/json
 
 ### Login (buyer demo)
-POST http://localhost:5197/api/Auth/LoginAsync
+POST http://localhost:5197/api/Auth/Login
 Content-Type: application/json
 
 {
