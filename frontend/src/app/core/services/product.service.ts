@@ -22,26 +22,26 @@ export class ProductService {
   private readonly http = inject(HttpClient);
 
   getCatalog(): Observable<ProductDto[]> {
-    return this.http.get<ProductDto[]>('/api/Products');
+    return this.http.get<ProductDto[]>('/api/Products/GetCatalogAsync');
   }
 
   getById(id: number): Observable<ProductDto> {
-    return this.http.get<ProductDto>(`/api/Products/${id}`);
+    return this.http.get<ProductDto>(`/api/Products/GetByIdAsync/${id}`);
   }
 
   getMine(): Observable<ProductDto[]> {
-    return this.http.get<ProductDto[]>('/api/Products/mine');
+    return this.http.get<ProductDto[]>('/api/Products/GetMineAsync');
   }
 
   create(body: CreateProductRequest): Observable<ProductDto> {
-    return this.http.post<ProductDto>('/api/Products', body);
+    return this.http.post<ProductDto>('/api/Products/CreateAsync', body);
   }
 
   update(id: number, body: UpdateProductRequest): Observable<ProductDto> {
-    return this.http.put<ProductDto>(`/api/Products/${id}`, body);
+    return this.http.put<ProductDto>(`/api/Products/UpdateAsync/${id}`, body);
   }
 
   delete(id: number): Observable<void> {
-    return this.http.delete<void>(`/api/Products/${id}`);
+    return this.http.delete<void>(`/api/Products/DeleteAsync/${id}`);
   }
 }

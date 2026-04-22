@@ -2,6 +2,7 @@ using backend.Models.Dtos;
 using backend.Models.Entities;
 using backend.Repositories.Interfaces;
 using backend.Services.Interfaces;
+using backend.Utilities.Interface;
 using Microsoft.AspNetCore.Identity;
 
 namespace backend.Services;
@@ -10,13 +11,13 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _users;
     private readonly IRoleRepository _roles;
-    private readonly IJwtTokenService _jwt;
+    private readonly IJwtService _jwt;
     private readonly IPasswordHasher<User> _passwordHasher;
 
     public AuthService(
         IUserRepository users,
         IRoleRepository roles,
-        IJwtTokenService jwt,
+        IJwtService jwt,
         IPasswordHasher<User> passwordHasher)
     {
         _users = users;

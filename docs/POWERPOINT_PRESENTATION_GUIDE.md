@@ -21,6 +21,25 @@
 |---------------------|----------------------|---------------|
 | เว็บ + เซิร์ฟเวอร์ + ตอนพัฒนา | `frontend/proxy.conf.js` (ถ้าจะพูดเรื่องรวมพอร์ต) | เว็บเรียก API ผ่านพร็อกซี ไม่ต้องจัดการข้ามเว็บเองทุกจุด |
 
+### คัดลอกไปใส่ PowerPoint — โครงโฟลเดอร์ (เวอร์ชันสั้น)
+
+ใช้ **1 สไลด์แบ่งซ้าย–ขวา** หรือ **2 สไลด์** (Frontend กับ Backend)
+
+**Frontend** (`frontend/src/app/`)
+
+- Shell → `app.*` · `app.routes` · `app.config`
+- Core → guards · interceptors · services · models
+- Features → `features/…` → หลัก ๆ ที่ `pages/` (มี `components/` / `styles/` เฉพาะบางฟีเจอร์)
+- Shared → `shared/components/`
+
+**Backend** (`backend/`)
+
+- HTTP → **Controllers** → **Services** → **Repositories**
+- ข้อมูล/DB → **Models** · **Data** · **Migrations**
+- อื่น ๆ ที่โชว์ได้สั้น ๆ → **Hubs** · **`DTO/Result`** · **`Utilities`** (`ITrace`, `JwtService`) · `Program.cs`
+
+รายละเอียดเต็ม: `docs/PROJECT_CHECKLIST_SUMMARY.md` → หมวด **โครงสร้างโปรเจกต์ (Frontend / Backend)**
+
 ---
 
 ## 2. เว็บหน้า — โครงแอป (Standalone)
@@ -43,8 +62,8 @@
 
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
-| เวลาข้อมูลจากด้านบนเปลี่ยน — ตัวอย่างในการ์ดสินค้า | `frontend/src/app/features/shop/product-card.component.ts` | ชี้ `OnChanges` / `ngOnChanges` (ตัวอย่างสกิล), `OnPush`, `@Input` / `@Output` — บอกว่าในโปรเจกต์บางส่วนเกือบว่างเพื่อ demo |
-| แม่ส่งข้อมูลลง ลูกส่งเหตุการณ์ขึ้น | `frontend/src/app/features/shop/product-list.component.html` (หรือ `.ts` ที่ใช้การ์ด) | ชี้ `(addToCart)` กับ `[product]` |
+| เวลาข้อมูลจากด้านบนเปลี่ยน — ตัวอย่างในการ์ดสินค้า | `frontend/src/app/features/shop/components/product-card.component.ts` | ชี้ `OnChanges` / `ngOnChanges` (ตัวอย่างสกิล), `OnPush`, `@Input` / `@Output` — บอกว่าในโปรเจกต์บางส่วนเกือบว่างเพื่อ demo |
+| แม่ส่งข้อมูลลง ลูกส่งเหตุการณ์ขึ้น | `frontend/src/app/features/shop/pages/product-list.component.html` (หรือ `.ts` ที่ใช้การ์ด) | ชี้ `(addToCart)` กับ `[product]` |
 
 ---
 
@@ -52,7 +71,7 @@
 
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
-| ฟอร์มยาว หลายแถว — ควบคุมในโค้ด | `frontend/src/app/features/checkout/checkout.component.ts` (หรือ `login` / `register` ตามเวลา) | ชี้ `FormBuilder`, `FormArray` ถ้ามีหลายบรรทัด |
+| ฟอร์มยาว หลายแถว — ควบคุมในโค้ด | `frontend/src/app/features/orders/pages/checkout.component.ts` (หรือ `auth/pages/login` / `register` ตามเวลา) | ชี้ `FormBuilder`, `FormArray` ถ้ามีหลายบรรทัด |
 
 ---
 
@@ -61,7 +80,7 @@
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
 | ลำดับตัวกลาง: ถอดห่อ → แนบโทเคน | `frontend/src/app/app.config.ts` (บรรทัด `withInterceptors`) | อธิบายว่าทุกหน้าได้ payload เดิม ไม่ต้องถอดเอง |
-| ถอดห่อคำตอบ | `frontend/src/app/core/interceptors/api-envelope.interceptor.ts` | ชี้ว่าอ่าน `success`, `data` ฯลฯ |
+| ถอด **`Result`** ฝั่งเว็บ | `frontend/src/app/core/interceptors/api-envelope.interceptor.ts` | ชี้ว่าอ่าน `success`, `data`; ถ้าไม่สำเร็จโยงไป **`error`** |
 | แนบ Bearer | `frontend/src/app/core/interceptors/auth.interceptor.ts` | ชี้การอ่าน token จากที่เก็บ |
 
 ---
@@ -79,7 +98,7 @@
 
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
-| โหมดประหยัด + บอกแถวเดิม + เลื่อนวาด | `frontend/src/app/features/shop/product-list.component.html` + `.ts` | ชี้ `@defer`, `trackBy`, `ChangeDetectionStrategy.OnPush` ในการ์ด |
+| โหมดประหยัด + บอกแถวเดิม + เลื่อนวาด | `frontend/src/app/features/shop/pages/product-list.component.html` + `.ts` | ชี้ `@defer`, `trackBy`, `ChangeDetectionStrategy.OnPush` ในการ์ด |
 
 ---
 
@@ -96,14 +115,15 @@
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
 | แยกรับคำขอ / กฎ / อ่านเขียน DB | `backend/Controllers/` ไฟล์ใดก็ได้ + `backend/Services/OrderService.cs` + `backend/Repositories/OrderRepository.cs` | สาธิต flow หนึ่งเส้น เช่น ออเดอร์ |
+| เส้นทาง URL = ชื่อเมธอด | `backend/Utilities/Constant.cs` + controller | `api/[controller]/[action]` — ฝั่งเว็บเรียกเช่น `.../GetByIdAsync/1` ตรงกับเมธอด |
 
 ---
 
-## 11. คำตอบห่อมาตรฐาน + DTO
+## 11. คำตอบมาตรฐาน (`Result<T>`) + DTO
 
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
-| รูปแบบเดียวกันทุก API | `backend/Models/Api/ApiResponse.cs` + `backend/Filters/ApiEnvelopeResultFilter.cs` | เชื่อมกับ interceptor ฝั่งเว็บ |
+| รูปแบบเดียวกันทุก API | `backend/DTO/Result.cs` + controller คืน **`Result<T>`** + `frontend/.../api-envelope.interceptor.ts` | ถอด `data` / จับ `success: false` |
 | ข้อมูลออเดอร์ที่ส่งออก | `backend/Models/Dtos/OrderDtos.cs` | ชี้ฟิลด์ที่หน้าเว็บใช้แสดง |
 
 ---
@@ -137,8 +157,8 @@
 
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
-| เช็กพร้อมรับงาน | `backend/Program.cs` (ส่วน health) | พาธ `/health` |
-| จับ error เป็น JSON | ค้นหา `ApiExceptionHandler` หรือ `IExceptionHandler` ใน `backend/` | เหมาะ API + SPA |
+| เช็กพร้อมรับงาน + body กำหนดเอง | `backend/Program.cs` (health, `JsonHealthCheckResponseWriter`) + `DTO/HealthCheck/` | `/health` ฯลฯ ตอบ JSON รวมสถานะ + ราย dependency; 200 ทุกสถานะเพื่ออ่านรายละเอียดใน body |
+| จับ error เป็น JSON | `Program.cs` → **`UseExceptionHandler("/error")`** + `Controllers/ErrorController.cs` (คืน **`Result`**) | SPA ได้รูปแบบเดียวกับ API ปกติ — ไม่เด้งไปหน้า error ของเซิร์ฟเวอร์ |
 
 ---
 
@@ -146,7 +166,7 @@
 
 | บน PowerPoint (ย่อ) | เปิดโค้ด | คำอธิบายเวที |
 |---------------------|-----------|---------------|
-| ตาราง “ไม่มีหรือไม่ตรง” | `docs/PROJECT_CHECKLIST_SUMMARY.md` ส่วนตาราง | RabbitMQ, NgModule เก่า, Database First ฯลฯ — พูดว่าถ้าบริษัทต้องการให้เติมตรงไหน |
+| ตาราง “ไม่มีหรือไม่ตรง” | `docs/PROJECT_CHECKLIST_SUMMARY.md` ส่วนตาราง | RabbitMQ, NgModule เก่า, Database First ฯลฯ — ใช้อธิบายว่าต่อยอด checklist ได้จากข้อไหน |
 
 ---
 

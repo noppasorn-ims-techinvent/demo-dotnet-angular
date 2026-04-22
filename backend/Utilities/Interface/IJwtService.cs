@@ -1,8 +1,8 @@
 using backend.Models.Entities;
 
-namespace backend.Services.Interfaces;
+namespace backend.Utilities.Interface;
 
-public interface IJwtTokenService
+public interface IJwtService
 {
     (string Token, DateTime ExpiresAtUtc) CreateToken(User user, IReadOnlyCollection<string> roles);
 }

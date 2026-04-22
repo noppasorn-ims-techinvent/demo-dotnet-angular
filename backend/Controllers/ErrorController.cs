@@ -1,29 +1,25 @@
-using backend.Infrastructure;
-using Microsoft.AspNetCore.Authorization;
+using System.Net;
+using backend.DTO;
+using backend.Utilities;
+using backend.Utilities.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
-/// <summary>Endpoint สำหรับดู trace / demo ITrace — ไม่ใช่ re-execute path ของ UseExceptionHandler (ใช้ <see cref="Middleware.ApiExceptionHandler"/> แทน)</summary>
-[AllowAnonymous]
-public class ErrorController : BaseApiController
+[ApiController]
+[ApiExplorerSettings(IgnoreApi = true)]
+public sealed class ErrorController : ControllerBase
 {
-    private readonly ITraceContext _trace;
-
-    public ErrorController(ITraceContext trace)
+    [Route("/error")]
+    public Result<object> Error([FromServices] ITrace trace, [FromServices] AppSettings appSettings)
     {
-        _trace = trace;
-    }
+        var result = new Result<object>(trace)
+        {
+            Success = false,
+            Message = appSettings.ErrorMessage.General,
+        };
 
-    /// <summary>คืน traceId ปัจจุบัน (ใช้เทียบกับ body ของ ApiResponse.traceId หลังเกิด error)</summary>
-    [HttpGet("trace")]
-    public ActionResult<object> GetTrace()
-    {
-        return Ok(
-            new
-            {
-                traceId = _trace.TraceId,
-                correlationIdHeader = _trace.CorrelationIdHeader,
-            });
+        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+        return result;
     }
 }

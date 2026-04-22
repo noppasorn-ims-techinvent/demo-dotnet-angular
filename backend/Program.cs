@@ -1,11 +1,11 @@
 using System.Text;
 using System.Text.Json;
 using backend.Data;
+using backend.DTO.HealthCheck;
 using backend.Health;
 using backend.Hubs;
-using backend.Filters;
-using backend.Infrastructure;
-using backend.Middleware;
+using backend.Utilities;
+using backend.Utilities.Interface;
 using backend.Models.Entities;
 using backend.Options;
 using backend.Queue;
@@ -28,22 +28,19 @@ var logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurr
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    var services = builder.Services;
 
-    builder.Logging.ClearProviders();
-    builder.Host.UseNLog();
+    #region Add services
 
-    builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
-
-    builder.Services.AddExceptionHandler<ApiExceptionHandler>();
-    builder.Services.AddProblemDetails();
-    builder.Services.AddControllers(options => options.Filters.Add(new ApiEnvelopeResultFilter()))
+    services.AddControllers()
         .AddJsonOptions(o =>
         {
             o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
         });
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen(options =>
+    services.AddSignalR();
+    services.AddEndpointsApiExplorer();
+    services.AddSwaggerGen(options =>
     {
         options.SwaggerDoc("v1", new OpenApiInfo { Title = "Marketplace Demo API", Version = "v1" });
         options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -67,20 +64,84 @@ try
         });
     });
 
-    builder.Services.AddDbContext<AppDbContext>(options =>
+    #region appsettings.json
+
+    var appSettings = new AppSettings();
+    builder.Configuration.GetSection(AppSettings.SectionName).Bind(appSettings);
+    services.AddTransient<AppSettings>(_ => appSettings);
+
+    #endregion
+
+    #region Database
+
+    services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-    builder.Services.AddHttpContextAccessor();
-    builder.Services.AddScoped<ITraceContext, HttpTraceContext>();
-    builder.Services.AddSingleton<DatabaseHealthCheck>();
-    builder.Services.AddHealthChecks()
+    #endregion
+
+    #region Health check
+
+    services.AddSingleton<DatabaseHealthCheck>();
+    services.AddHealthChecks()
         .AddCheck<DatabaseHealthCheck>("database", failureStatus: HealthStatus.Unhealthy, tags: new[] { "ready", "db" })
         .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" });
 
+    #endregion
+
+    #region Json
+
+    #endregion
+
+    #region Dependency Injection
+
+    services.AddHttpContextAccessor();
+    services.AddScoped<ITrace, Trace>();
+
+    #region Services
+
+    services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+    services.AddTransient<IJwtService, JwtService>();
+    services.AddScoped<IAuthService, AuthService>();
+    services.AddScoped<IProductService, ProductService>();
+    services.AddScoped<IOrderService, OrderService>();
+
+    #endregion
+
+    #region Repositories
+
+    services.AddScoped<IUserRepository, UserRepository>();
+    services.AddScoped<IRoleRepository, RoleRepository>();
+    services.AddScoped<IProductRepository, ProductRepository>();
+    services.AddScoped<IOrderRepository, OrderRepository>();
+
+    #endregion
+
+    services.AddSingleton<InMemoryOrderPlacedQueue>();
+    services.AddSingleton<IOrderPlacedQueue>(sp => sp.GetRequiredService<InMemoryOrderPlacedQueue>());
+    services.AddHostedService<OrderPlacedConsumer>();
+
+    #endregion
+
+    #region Storage
+
+    #endregion
+
+    #region Size Data Request
+
+    #endregion
+
+    #region JWT
+
+    services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+
     var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
         ?? throw new InvalidOperationException("Jwt configuration is missing.");
+    if (string.IsNullOrWhiteSpace(appSettings.Jwt.Secret))
+    {
+        throw new InvalidOperationException("AppSettings:Jwt:Secret is required (same signing key as JwtService).");
+    }
 
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
@@ -91,7 +152,7 @@ try
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = jwtOptions.Issuer,
                 ValidAudience = jwtOptions.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(appSettings.Jwt.Secret)),
             };
             options.Events = new JwtBearerEvents
             {
@@ -99,7 +160,6 @@ try
                 {
                     var accessToken = context.Request.Query["access_token"];
                     var path = context.HttpContext.Request.Path;
-                    // negotiate / WebSocket ของ SignalR อยู่ใต้ path ฮับเดียวกัน
                     if (!string.IsNullOrEmpty(accessToken) &&
                         path.StartsWithSegments("/hubs"))
                     {
@@ -111,39 +171,36 @@ try
             };
         });
 
-    builder.Services.AddAuthorization();
+    services.AddAuthorization();
 
-    var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
-    builder.Services.AddCors(options =>
+    #endregion
+
+    #endregion
+
+    builder.Logging.ClearProviders();
+    builder.Host.UseNLog();
+
+    services.AddCors(options =>
     {
-        options.AddPolicy("Frontend", policy =>
-        {
-            policy.WithOrigins(corsOrigins)
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        });
+        var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
+        options.AddPolicy(
+            "Frontend",
+            policy =>
+            {
+                policy.WithOrigins(corsOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
     });
-
-    builder.Services.AddSignalR();
-
-    builder.Services.AddSingleton<InMemoryOrderPlacedQueue>();
-    builder.Services.AddSingleton<IOrderPlacedQueue>(sp => sp.GetRequiredService<InMemoryOrderPlacedQueue>());
-    builder.Services.AddHostedService<OrderPlacedConsumer>();
-
-    builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-    builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
-    builder.Services.AddScoped<IUserRepository, UserRepository>();
-    builder.Services.AddScoped<IRoleRepository, RoleRepository>();
-    builder.Services.AddScoped<IProductRepository, ProductRepository>();
-    builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-    builder.Services.AddScoped<IAuthService, AuthService>();
-    builder.Services.AddScoped<IProductService, ProductService>();
-    builder.Services.AddScoped<IOrderService, OrderService>();
 
     var app = builder.Build();
 
     await DbSeeder.SeedAsync(app.Services);
+
+    #region Static Files and Middleware
+
+    #endregion
 
     if (app.Environment.IsDevelopment())
     {
@@ -151,29 +208,47 @@ try
         app.UseSwaggerUI();
     }
 
-    app.UseExceptionHandler();
-    app.UseMiddleware<CorrelationIdMiddleware>();
-    // Local "http" launch profile binds HTTP only; HTTPS redirection then logs
-    // "Failed to determine the https port". Redirect only outside Development.
+    app.UseCors("Frontend");
+    app.UseExceptionHandler("/error");
     if (!app.Environment.IsDevelopment())
     {
         app.UseHttpsRedirection();
     }
 
-    app.UseCors("Frontend");
     app.UseAuthentication();
     app.UseAuthorization();
 
-    app.MapHealthChecks("/health");
-    app.MapHealthChecks(
-        "/health/live",
-        new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") });
-    app.MapHealthChecks(
-        "/health/ready",
-        new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") });
-
     app.MapControllers();
     app.MapHub<MarketplaceHub>(MarketplaceHub.Path);
+
+    var healthJson = new HealthCheckOptions
+    {
+        ResponseWriter = JsonHealthCheckResponseWriter,
+        ResultStatusCodes =
+        {
+            [HealthStatus.Healthy] = StatusCodes.Status200OK,
+            [HealthStatus.Degraded] = StatusCodes.Status200OK,
+            [HealthStatus.Unhealthy] = StatusCodes.Status200OK,
+        },
+    };
+
+    app.MapHealthChecks("/health", healthJson);
+    app.MapHealthChecks(
+        "/health/live",
+        new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live"),
+            ResponseWriter = healthJson.ResponseWriter,
+            ResultStatusCodes = healthJson.ResultStatusCodes,
+        });
+    app.MapHealthChecks(
+        "/health/ready",
+        new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("ready"),
+            ResponseWriter = healthJson.ResponseWriter,
+            ResultStatusCodes = healthJson.ResultStatusCodes,
+        });
 
     app.Run();
 }
@@ -185,4 +260,34 @@ catch (Exception exception)
 finally
 {
     LogManager.Shutdown();
+}
+
+static Task JsonHealthCheckResponseWriter(HttpContext context, HealthReport result)
+{
+    var env = context.RequestServices.GetRequiredService<IWebHostEnvironment>();
+    context.Response.ContentType = "application/json; charset=utf-8";
+
+    var serverStatus = new ServerStatus
+    {
+        EnvironmentName = env.EnvironmentName,
+        Server = new ComponentStatus
+        {
+            Name = "Marketplace Demo API",
+            Status = Enum.GetName(result.Status),
+            Type = Enum.GetName(typeof(ComponentType), ComponentType.Server),
+        },
+    };
+
+    foreach (var entry in result.Entries)
+    {
+        serverStatus.Dependencies.Add(new ComponentStatus
+        {
+            Name = entry.Key,
+            Status = Enum.GetName(entry.Value.Status),
+            Type = Enum.GetName(typeof(ComponentType), ComponentType.Component),
+        });
+    }
+
+    var json = JsonSerializer.Serialize(serverStatus);
+    return context.Response.WriteAsync(json);
 }

@@ -20,7 +20,7 @@ export const appConfig: ApplicationConfig = {
       const http = inject(HttpClient);
       const appCfg = inject(AppConfigService);
 
-      return firstValueFrom(http.get<AppConfigDto>('/api/App/config'))
+      return firstValueFrom(http.get<AppConfigDto>('/api/App/GetConfig'))
         .then((dto) => {
           appCfg.applyFromApi(dto);
         })

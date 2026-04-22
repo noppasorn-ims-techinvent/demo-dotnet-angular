@@ -45,7 +45,7 @@ export class AuthService {
 
   login(email: string, password: string) {
     this._busy.set(true);
-    return this.http.post<AuthResponse>('/api/Auth/login', { email, password }).pipe(
+    return this.http.post<AuthResponse>('/api/Auth/LoginAsync', { email, password }).pipe(
       tap((res) => this.persistSession(res)),
       tap((res) => this.connectRealtimeIfNeeded(res.user)),
       finalize(() => this._busy.set(false)),
@@ -55,7 +55,7 @@ export class AuthService {
 
   register(email: string, password: string, displayName: string) {
     this._busy.set(true);
-    return this.http.post<AuthResponse>('/api/Auth/register', { email, password, displayName }).pipe(
+    return this.http.post<AuthResponse>('/api/Auth/RegisterAsync', { email, password, displayName }).pipe(
       tap((res) => this.persistSession(res)),
       tap((res) => this.connectRealtimeIfNeeded(res.user)),
       finalize(() => this._busy.set(false)),

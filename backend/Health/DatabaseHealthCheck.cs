@@ -4,7 +4,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace backend.Health;
 
-/// <summary>ตรวจ SQL Server ผ่าน scoped <see cref="AppDbContext"/> (สร้าง scope ต่อครั้งที่รัน health)</summary>
 public sealed class DatabaseHealthCheck : IHealthCheck
 {
     private readonly IServiceScopeFactory _scopeFactory;
