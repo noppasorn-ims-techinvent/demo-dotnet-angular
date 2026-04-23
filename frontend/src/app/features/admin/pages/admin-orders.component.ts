@@ -79,6 +79,7 @@ export class AdminOrdersComponent {
     const map = new Map<number, SellerCancelBucket>();
     for (const line of detail.lines) {
       const st = line.lineCancellationState ?? 1;
+      // 0 = legacy/ปกติ, 1 = รอตัดสิน — ไม่รวม 2 (ร้านไม่อนุมัติแล้ว)
       if (st !== 1 && st !== 0) {
         continue;
       }
@@ -119,7 +120,7 @@ export class AdminOrdersComponent {
 
   protected async reviewCancellation(order: OrderDto, targetSellerUserId: number, approved: boolean): Promise<void> {
     const result = await Swal.fire({
-      title: approved ? 'อนุมัติยกเลิก (เฉพาะร้านนี้)' : 'ไม่อนุมัติ — แยกเป็นออเดอร์ร้านนี้',
+      title: approved ? 'อนุมัติยกเลิก (เฉพาะร้านนี้)' : 'ไม่อนุมัติ — คงคำสั่งซื้อเดิม (สินค้าร้านนี้)',
       input: 'textarea',
       inputLabel: approved ? 'หมายเหตุ (แสดงให้ลูกค้า)' : 'เหตุผลที่ไม่อนุมัติ',
       inputPlaceholder: approved ? 'เช่น ยืนยันยกเลิกตามคำขอ' : 'อธิบายเหตุผล…',
@@ -144,7 +145,9 @@ export class AdminOrdersComponent {
         await Swal.fire({
           icon: 'success',
           title: approved ? 'อนุมัติแล้ว' : 'บันทึกแล้ว',
-          text: approved ? 'ยกเลิกเฉพาะสินค้าของร้านที่เลือก' : 'สินค้าของร้านนี้ถูกแยกไปออเดอร์ใหม่',
+          text: approved
+            ? 'ยกเลิกเฉพาะสินค้าของร้านที่เลือก'
+            : 'สินค้าร้านนี้ยังอยู่ในออเดอร์เดิม — รอร้านอื่นตัดสินครบแล้วระบบจะคืนสถานะให้ลูกค้า',
           timer: 2400,
           showConfirmButton: false,
         });

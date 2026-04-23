@@ -3,7 +3,7 @@
     <div>
       <h1 class="h2 mb-1">ออเดอร์เข้าร้าน</h1>
       <p class="text-muted small mb-0">
-        แสดงเฉพาะคำสั่งซื้อที่มีสินค้าของคุณ · คำขอยกเลิกแยกตามร้าน: อนุมัติ = ยกเลิกเฉพาะของคุณ · ไม่อนุมัติ = แยกเป็นออเดอร์ใหม่ของร้านคุณ
+        แสดงเฉพาะคำสั่งซื้อที่มีสินค้าของคุณ · คำขอยกเลิกแยกตามร้าน: อนุมัติ = ยกเลิกเฉพาะของคุณ · ไม่อนุมัติ = คงออเดอร์เดิม (ไม่สร้างเลขออเดอร์ใหม่)
       </p>
     </div>
     <div class="d-flex flex-wrap gap-2">
@@ -43,7 +43,7 @@
               อนุมัติยกเลิก (ร้านคุณ)
             </button>
             <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="busy()" (click)="reviewCancellation(o, false)">
-              ไม่อนุมัติ (แยกออเดอร์)
+              ไม่อนุมัติ (คงออเดอร์เดิม)
             </button>
           </div>
         }
@@ -51,8 +51,11 @@
           @for (line of o.lines; track line.productId) {
             <li>
               {{ line.productName }} × {{ line.quantity }} · {{ line.unitPrice | thaiBaht }} / ชิ้น
-              @if (needsMyCancellationReview(o)) {
+              @if (lineNeedsMyCancellationDecision(o, line.lineCancellationState)) {
                 <span class="badge text-bg-warning ms-1">รอคุณตัดสิน</span>
+              }
+              @if (o.status === 4 && line.lineCancellationState === 2) {
+                <span class="badge text-bg-secondary ms-1">คุณไม่อนุมัติยกเลิกแล้ว</span>
               }
             </li>
           }

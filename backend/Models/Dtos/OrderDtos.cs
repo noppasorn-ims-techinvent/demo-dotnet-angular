@@ -18,7 +18,7 @@ public class OrderLineDto
 
     public string SellerDisplayName { get; set; } = string.Empty;
 
-    /// <summary>OrderLineCancellationState — 1 = รอร้านนี้ตัดสิน</summary>
+    /// <summary>OrderLineCancellationState — 0 ปกติ, 1 รอร้านนี้ตัดสิน, 2 ร้านไม่อนุมัติยกเลิก</summary>
     public int LineCancellationState { get; set; }
 }
 

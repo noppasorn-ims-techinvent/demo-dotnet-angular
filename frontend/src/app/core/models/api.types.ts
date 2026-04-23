@@ -29,7 +29,7 @@ export interface OrderLineDto {
   unitPrice: number;
   sellerId: number;
   sellerDisplayName: string;
-  /** 0 = ปกติ, 1 = รอร้านนี้ตัดสินคำขอยกเลิก */
+  /** 0 = ปกติ, 1 = รอร้านนี้ตัดสินคำขอยกเลิก, 2 = ร้านไม่อนุมัติยกเลิก (คงออเดอร์เดิม) */
   lineCancellationState: number;
 }
 

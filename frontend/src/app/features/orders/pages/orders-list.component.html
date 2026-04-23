@@ -42,6 +42,12 @@
                       @if (line.sellerDisplayName) {
                         <span class="text-muted">({{ line.sellerDisplayName }})</span>
                       }
+                      @if (o.status === 4 && line.lineCancellationState === 1) {
+                        <span class="badge text-bg-warning ms-1">รอร้านตัดสิน</span>
+                      }
+                      @if (o.status === 4 && line.lineCancellationState === 2) {
+                        <span class="badge text-bg-secondary ms-1">ร้านไม่อนุมัติยกเลิก</span>
+                      }
                     </li>
                   }
                 </ul>

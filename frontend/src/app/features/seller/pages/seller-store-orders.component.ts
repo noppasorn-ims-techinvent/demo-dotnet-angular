@@ -38,14 +38,22 @@ export class SellerStoreOrdersComponent {
     });
   }
 
-  /** รอยกเลิก + มีสินค้าร้านนี้ในออเดอร์ — รวมข้อมูลเก่าที่บรรทัดยังเป็น 0 แต่สถานะออเดอร์เป็น 4 */
+  /** รอยกเลิกและยังมีบรรทัดของร้านนี้ที่รอตัดสิน (สถานะบรรทัด = 1) */
   protected needsMyCancellationReview(o: OrderDto): boolean {
-    return o.status === 4 && o.lines.length > 0;
+    if (o.status !== 4 || o.lines.length === 0) {
+      return false;
+    }
+    return o.lines.some((l) => (l.lineCancellationState ?? 0) === 1);
+  }
+
+  /** แสดง badge รอตัดสินเฉพาะบรรทัดที่ยังรอร้านนี้ */
+  protected lineNeedsMyCancellationDecision(o: OrderDto, lineCancellationState: number | undefined): boolean {
+    return o.status === 4 && (lineCancellationState ?? 0) === 1;
   }
 
   protected async reviewCancellation(order: OrderDto, approved: boolean): Promise<void> {
     const result = await Swal.fire({
-      title: approved ? 'อนุมัติยกเลิก (เฉพาะร้านคุณ)' : 'ไม่อนุมัติ — แยกเป็นออเดอร์ร้านคุณ',
+      title: approved ? 'อนุมัติยกเลิก (เฉพาะร้านคุณ)' : 'ไม่อนุมัติ — คงคำสั่งซื้อเดิม',
       input: 'textarea',
       inputLabel: approved ? 'หมายเหตุ (แสดงให้ลูกค้า)' : 'เหตุผลที่ไม่อนุมัติ',
       showCancelButton: true,

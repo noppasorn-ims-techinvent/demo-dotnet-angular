@@ -26,7 +26,7 @@ public class Order : BaseEntity
     /// <summary>จำลองการชำระ: card / bank</summary>
     public string? SimulatedPaymentMethod { get; set; }
 
-    /// <summary>ออเดอร์นี้แยกมาจากคำสั่งซื้อ # หลังร้านไม่อนุมัติยกเลิก (ไม่ใช้ FK ถ้าออเดอร์ต้นทางถูกลบ)</summary>
+    /// <summary>ข้อมูลเก่า: เคยแยกมาจากออเดอร์ # หลังไม่อนุมัติยกเลิก (ปัจจุบันไม่อนุมัติคงบรรทัดในออเดอร์เดิม)</summary>
     public int? SplitSourceOrderId { get; set; }
 
     public ICollection<OrderLine> Lines { get; set; } = new List<OrderLine>();

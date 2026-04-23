@@ -259,7 +259,6 @@ public class OrderService : IOrderService
         CancellationToken cancellationToken = default)
     {
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
-        Order? splitChild = null;
         try
         {
             var order = await _db.Orders
@@ -353,10 +352,10 @@ public class OrderService : IOrderService
             AppendSellerCancellationNote(order, targetSellerId, noteTrim);
             order.CancellationReviewedByUserId = reviewerUserId;
 
-            var amountDelta = targetLines.Sum(l => l.UnitPrice * l.Quantity);
-
             if (request.Approved)
             {
+                var amountDelta = targetLines.Sum(l => l.UnitPrice * l.Quantity);
+
                 foreach (var line in targetLines)
                 {
                     var product = line.Product ?? await _db.Products.FirstOrDefaultAsync(p => p.Id == line.ProductId, cancellationToken);
@@ -376,63 +375,16 @@ public class OrderService : IOrderService
             }
             else
             {
-                splitChild = new Order
-                {
-                    BuyerId = order.BuyerId,
-                    Status = order.PreCancellationStatus ?? OrderStatus.Paid,
-                    CreatedAtUtc = DateTime.UtcNow,
-                    TotalAmount = amountDelta,
-                    SplitSourceOrderId = order.Id,
-                    SimulatedPaymentMethod = order.SimulatedPaymentMethod,
-                };
-
+                // ไม่อนุมัติ: คงบรรทัดในออเดอร์เดิม (ไม่สร้างออเดอร์ลูก) จนร้านทุกร้านตัดสินครบแล้วคืนสถานะทั้งใบ
                 foreach (var line in targetLines)
                 {
-                    splitChild.Lines.Add(
-                        new OrderLine
-                        {
-                            ProductId = line.ProductId,
-                            Quantity = line.Quantity,
-                            UnitPrice = line.UnitPrice,
-                            LineCancellationState = OrderLineCancellationState.None,
-                        });
-                    _db.OrderLines.Remove(line);
+                    line.LineCancellationState = OrderLineCancellationState.SellerDeclinedCancellation;
                 }
-
-                order.TotalAmount -= amountDelta;
-                if (order.TotalAmount < 0)
-                {
-                    order.TotalAmount = 0;
-                }
-
-                await _db.Orders.AddAsync(splitChild, cancellationToken);
             }
 
             await _db.SaveChangesAsync(cancellationToken);
 
             var parentId = order.Id;
-
-            if (splitChild is not null)
-            {
-                var childFull = await _db.Orders
-                    .Include(o => o.Lines)
-                    .ThenInclude(l => l.Product)
-                    .ThenInclude(p => p.Seller)
-                    .AsNoTracking()
-                    .FirstAsync(o => o.Id == splitChild.Id, cancellationToken);
-                var childSellerIds = childFull.Lines
-                    .Where(l => l.Product is not null)
-                    .Select(l => l.Product!.SellerId)
-                    .Distinct()
-                    .ToList();
-                await NotifySellersNewOrderAsync(
-                    childFull.Id,
-                    childFull.BuyerId,
-                    childFull.TotalAmount,
-                    childFull.Lines.Count,
-                    childSellerIds,
-                    cancellationToken);
-            }
 
             var orderStillCancellationPending = order.Status == OrderStatus.CancellationPending;
             var anyPending = await _db.OrderLines.AnyAsync(
@@ -483,33 +435,11 @@ public class OrderService : IOrderService
 
             await transaction.CommitAsync(cancellationToken);
 
-            if (splitChild is not null)
-            {
-                var childDto = await _orders.GetByIdWithLinesAsync(splitChild.Id, cancellationToken);
-                if (childDto is not null)
-                {
-                    await BroadcastOrderStatusAsync(childDto, cancellationToken);
-                }
-            }
-
             var full = await _orders.GetByIdWithLinesAsync(parentId, cancellationToken);
             if (full is not null)
             {
                 await BroadcastOrderStatusAsync(full, cancellationToken);
                 await BroadcastCancellationHubAsync(full, request.Approved, cancellationToken);
-
-                // ไม่อนุมัติจนย้ายบรรทัดหมด — พ่อเป็นออเดอร์ว่างสถานะยกเลิก คืน DTO ออเดอร์ลูกให้ผู้เรียก (เดิมตอนลบพ่อจะคืนลูก)
-                if (splitChild is not null
-                    && full.Status == OrderStatus.Cancelled
-                    && full.Lines.Count == 0)
-                {
-                    var childReturn = await _orders.GetByIdWithLinesAsync(splitChild.Id, cancellationToken);
-                    if (childReturn is not null)
-                    {
-                        return Map(childReturn);
-                    }
-                }
-
                 return Map(full);
             }
 
